@@ -67,3 +67,23 @@ class TransactionCreate(TransactionBase):
 class Transaction(TransactionBase):
     id: str
     user_id: str
+
+
+# ── 프론트엔드 요청 전용 스키마 ────────────────────────────────────────────────
+# 프론트엔드는 spent_at 대신 date, note 대신 memo 필드명을 사용한다.
+
+class TransactionFromClient(BaseModel):
+    """POST /transactions, POST /receipts/confirm 요청 바디."""
+    store: str
+    amount: int
+    date: str           # YYYY-MM-DD → DB저장 시 spent_at으로 매핑
+    category: str | None = None
+    memo: str | None = None  # 수동 입력 메모 → note로 매핑
+
+
+class TransactionUpdateFromClient(BaseModel):
+    """PUT /transactions/{id} 요청 바디 (부분 업데이트)."""
+    store: str | None = None
+    amount: int | None = None
+    date: str | None = None   # YYYY-MM-DD → spent_at으로 매핑
+    category: str | None = None
