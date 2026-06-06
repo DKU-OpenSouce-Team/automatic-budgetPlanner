@@ -1,23 +1,5 @@
-import { useState, useEffect } from 'react'
-
-// ── 더미 데이터 ──────────────────────────────────────────
-const DUMMY_TX = [
-  { id: '1', store: '스타벅스', amount: -5500, date: '2026-06-01', category: '식비' },
-  { id: '2', store: '지하철', amount: -1400, date: '2026-06-02', category: '교통' },
-  { id: '3', store: '월급', amount: 3200000, date: '2026-06-03', category: '수입' },
-  { id: '4', store: '올리브영', amount: -32000, date: '2026-06-04', category: '쇼핑' },
-  { id: '5', store: '맥도날드', amount: -8900, date: '2026-06-05', category: '식비' },
-  { id: '6', store: '넷플릭스', amount: -17000, date: '2026-06-06', category: '구독' },
-  { id: '7', store: 'CU편의점', amount: -4200, date: '2026-06-07', category: '식비' },
-  { id: '8', store: '버스', amount: -1400, date: '2026-06-08', category: '교통' },
-  { id: '9', store: '이마트', amount: -55000, date: '2026-06-09', category: '식비' },
-  { id: '10', store: '헬스장', amount: -60000, date: '2026-06-10', category: '건강' },
-  { id: '11', store: '카카오페이', amount: -12000, date: '2026-06-11', category: '기타' },
-  { id: '12', store: '배달의민족', amount: -22000, date: '2026-06-12', category: '식비' },
-  { id: '13', store: '지하철', amount: -1400, date: '2026-06-13', category: '교통' },
-  { id: '14', store: '무신사', amount: -79000, date: '2026-06-14', category: '쇼핑' },
-  { id: '15', store: '부수입', amount: 450000, date: '2026-06-15', category: '수입' },
-]
+import { useState } from 'react'
+import { useTransactions } from '../contexts/TransactionContext'
 
 const CATEGORY_OPTIONS = ['전체', '식비', '교통', '쇼핑', '구독', '건강', '수입', '기타']
 const FILE_TYPE_ICONS = { csv: '📊', json: '📋', txt: '📄' }
@@ -44,7 +26,7 @@ function generateJSON(rows) {
 }
 
 export default function MyFilesPage() {
-  const [transactions, setTransactions] = useState([])
+  const { transactions } = useTransactions()           // ← 전역 데이터
   const [selected, setSelected] = useState(new Set())
   const [filterCat, setFilterCat] = useState('전체')
   const [filterType, setFilterType] = useState('지출')
@@ -59,14 +41,6 @@ export default function MyFilesPage() {
   const [tab, setTab] = useState('select') // 'select' | 'files'
   const [saveSuccess, setSaveSuccess] = useState(false)
 
-  useEffect(() => {
-    setTransactions(DUMMY_TX)
-    // 로컬 스토리지에서 저장 파일 불러오기
-    try {
-      const saved = JSON.parse(localStorage.getItem('myfiles') || '[]')
-      setSavedFiles(saved)
-    } catch { setSavedFiles([]) }
-  }, [])
 
   // ── 필터링 & 정렬 ──
   const filtered = transactions

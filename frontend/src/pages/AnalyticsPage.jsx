@@ -1,23 +1,5 @@
-import { useState, useEffect } from 'react'
-
-// ── 더미 데이터 ──────────────────────────────────────────
-const DUMMY_TRANSACTIONS = [
-  { id: '1', store: '스타벅스', amount: -5500, date: '2026-06-01', category: '식비' },
-  { id: '2', store: '지하철', amount: -1400, date: '2026-06-02', category: '교통' },
-  { id: '3', store: '월급', amount: 3200000, date: '2026-06-03', category: '수입' },
-  { id: '4', store: '올리브영', amount: -32000, date: '2026-06-04', category: '쇼핑' },
-  { id: '5', store: '맥도날드', amount: -8900, date: '2026-06-05', category: '식비' },
-  { id: '6', store: '넷플릭스', amount: -17000, date: '2026-06-06', category: '구독' },
-  { id: '7', store: 'CU편의점', amount: -4200, date: '2026-06-07', category: '식비' },
-  { id: '8', store: '버스', amount: -1400, date: '2026-06-08', category: '교통' },
-  { id: '9', store: '이마트', amount: -55000, date: '2026-06-09', category: '식비' },
-  { id: '10', store: '헬스장', amount: -60000, date: '2026-06-10', category: '건강' },
-  { id: '11', store: '카카오페이', amount: -12000, date: '2026-06-11', category: '기타' },
-  { id: '12', store: '배달의민족', amount: -22000, date: '2026-06-12', category: '식비' },
-  { id: '13', store: '지하철', amount: -1400, date: '2026-06-13', category: '교통' },
-  { id: '14', store: '무신사', amount: -79000, date: '2026-06-14', category: '쇼핑' },
-  { id: '15', store: '부수입', amount: 450000, date: '2026-06-15', category: '수입' },
-]
+import { useState } from 'react'
+import { useTransactions } from '../contexts/TransactionContext'
 
 const MONTHLY_DUMMY = [
   { month: '1월', income: 3200000, expense: 1420000 },
@@ -50,23 +32,13 @@ function fmtSigned(n) {
 }
 
 export default function AnalyticsPage() {
-  const [transactions, setTransactions] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { transactions } = useTransactions()          // ← 전역 데이터
   const [activeTab, setActiveTab] = useState('monthly')
-  const [animIn, setAnimIn] = useState(false)
+  const [animIn, setAnimIn] = useState(true)
   const [budgets, setBudgets] = useState(() => {
     try { return JSON.parse(localStorage.getItem('budgets') || 'null') || DEFAULT_BUDGETS }
     catch { return DEFAULT_BUDGETS }
   })
-
-  useEffect(() => {
-    // 백엔드 미구현 시 더미 사용
-    setTimeout(() => {
-      setTransactions(DUMMY_TRANSACTIONS)
-      setLoading(false)
-      setTimeout(() => setAnimIn(true), 50)
-    }, 400)
-  }, [])
 
   // 이번 달 계산
   const thisMonth = '2026-06'
@@ -94,19 +66,10 @@ export default function AnalyticsPage() {
   const maxDay = Math.max(...byDay)
 
   // 전월 비교
-  const prevMonth = '2026-05'
   const prevExpense = MONTHLY_DUMMY.find(m => m.month === '5월')?.expense || 0
   const expenseDiff = expense - prevExpense
   const expenseDiffPct = prevExpense ? ((expenseDiff / prevExpense) * 100).toFixed(1) : 0
 
-  if (loading) {
-    return (
-      <div style={S.loadingWrap}>
-        <div style={S.spinner} />
-        <p style={{ color: '#9ca3af', marginTop: 12 }}>데이터 불러오는 중...</p>
-      </div>
-    )
-  }
 
   return (
     <section style={S.page}>
@@ -554,8 +517,6 @@ function DonutChart({ entries, total }) {
 const S = {
   page: { maxWidth: 800, margin: '0 auto', padding: '32px 16px', fontFamily: "'Pretendard', 'Apple SD Gothic Neo', sans-serif" },
   pageTitle: { fontSize: 26, fontWeight: 800, marginBottom: 24, color: '#111827' },
-  loadingWrap: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '40vh' },
-  spinner: { width: 36, height: 36, border: '3px solid #e5e7eb', borderTop: '3px solid #6d28d9', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
   kpiRow: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 28 },
   kpiCard: { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '18px 14px', textAlign: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' },
   kpiIcon: { fontSize: 24 },
