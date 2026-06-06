@@ -27,7 +27,8 @@ def get_reader():
         import easyocr  # 무거운 import 이므로 함수 안에서 지연 로딩
 
         # 한국어 + 영어(숫자/상호 영문 대비). GPU 없으면 CPU 로 동작.
-        _reader = easyocr.Reader(["ko", "en"], gpu=False)
+        # verbose=False: 진행바(█) 출력이 일부 콘솔(cp949 등)에서 인코딩 오류를 일으키는 것 방지.
+        _reader = easyocr.Reader(["ko", "en"], gpu=False, verbose=False)
     return _reader
 
 
@@ -89,9 +90,97 @@ _TOTAL_RE = re.compile(
 # 일반 금액 토큰 (원/₩ 포함 또는 콤마가 있는 숫자)
 _AMOUNT_RE = re.compile(r"([\d,]{3,})\s*원|₩\s*([\d,]{3,})|([\d]{1,3}(?:,\d{3})+)")
 
+# --- 품목 파싱용 패턴 ---------------------------------------------------------
+# 가격 토큰: '1,500' / '1, 500'(OCR 공백) / '5000원' / '₩5000'.
+# 콤마 묶음은 OCR 이 콤마 뒤에 공백을 넣는 경우가 잦아 '\s?' 로 허용한다.
+_PRICE_TOKEN = r"\d{1,3}(?:,\s?\d{3})+|\d{2,6}\s*원|₩\s*\d{2,6}"
+# '이름 ... 가격' 형태(같은 줄). 이름부와 가격부를 분리 캡처.
+_ITEM_INLINE_RE = re.compile(rf"^(?P<name>.*?)(?P<price>{_PRICE_TOKEN})\s*$")
+# 가격만 단독으로 있는 줄(직전 이름 줄과 페어링).
+_PRICE_ONLY_RE = re.compile(rf"^\s*(?P<price>{_PRICE_TOKEN})\s*$")
+# 품목 영역의 끝 = 합계/총액/결제 정보가 시작되는 줄.
+_ITEM_END_RE = re.compile(
+    r"합\s*계|총\s*(?:합|액)|구\s*매\s*액|판\s*매\s*(?:금|총)|받을\s*금액|청\s*구\s*액"
+)
+# 품목이 아닌 메타정보 줄(사업자번호·전화·승인번호·카드 등)을 걸러낸다.
+_ITEM_NOISE_RE = re.compile(
+    r"\d{3}-\d{2}-\d{5}"                 # 사업자등록번호
+    r"|\d{2,4}-\d{3,4}-\d{4}"           # 전화번호
+    r"|T\s*:|TEL"                        # 전화 표기
+    r"|POS|승\s*인|거\s*래\s*번\s*호|영\s*수\s*증|카\s*드|대\s*표|점\s*장"
+    r"|담\s*당|매\s*장|주\s*소|단\s*가|수\s*량|제\s*품\s*명|상\s*품\s*명"
+    r"|메\s*뉴|품\s*목|과\s*세|부\s*가|금\s*액"
+)
+
 
 def _to_int(num_str: str) -> int:
-    return int(num_str.replace(",", "").strip())
+    return int(re.sub(r"[^\d]", "", num_str))
+
+
+def _clean_item_name(raw: str) -> str | None:
+    """품목명 후보를 다듬는다. 너무 짧거나 기호/숫자뿐이면 None."""
+    name = raw.strip(" \t-~·.:)([]")
+    # 글자(한글/영문)가 2자 미만이면 품목명으로 보지 않는다.
+    if len(re.sub(r"[^0-9A-Za-z가-힣]", "", name)) < 2:
+        return None
+    if re.fullmatch(r"[\d,\s원₩]+", name):
+        return None
+    return name
+
+
+def parse_items(lines: list[str]) -> list[dict]:
+    """품목 목록을 추출한다.
+
+    한국 영수증 OCR 특성에 맞춰:
+    - 합계 줄 이전(= 품목 영역)만 본다.
+    - 사업자번호/전화/승인번호 등 메타 줄은 제외한다.
+    - '이름↵가격'으로 줄이 분리된 레이아웃을 페어링한다.
+    """
+    # 1) 품목 영역 한정: 첫 합계/총액 줄 전까지.
+    end = len(lines)
+    for i, ln in enumerate(lines):
+        if _ITEM_END_RE.search(ln):
+            end = i
+            break
+    region = lines[:end]
+
+    items: list[dict] = []
+    pending_name: str | None = None  # 직전 줄에서 본 이름(가격 줄을 기다리는 중)
+    for ln in region:
+        if _ITEM_NOISE_RE.search(ln):
+            pending_name = None
+            continue
+
+        # (a) 같은 줄에 '이름 가격' 둘 다 있는 경우
+        m = _ITEM_INLINE_RE.match(ln)
+        if m:
+            name = _clean_item_name(m.group("name"))
+            price = _to_int(m.group("price"))
+            if name and price > 0:
+                items.append({"name": name, "price": price})
+                pending_name = None
+                continue
+            # 가격만 있는 줄(이름부가 비거나 무의미) → 직전 이름과 페어링
+            if not name and pending_name and price > 0:
+                items.append({"name": pending_name, "price": price})
+                pending_name = None
+                continue
+
+        # (b) 가격만 단독으로 있는 줄 → 직전 이름과 페어링
+        pm = _PRICE_ONLY_RE.match(ln)
+        if pm:
+            price = _to_int(pm.group("price"))
+            if pending_name and price > 0:
+                items.append({"name": pending_name, "price": price})
+            pending_name = None
+            continue
+
+        # (c) 가격 없는 텍스트 줄 → 다음 가격 줄을 위한 이름 후보로 보관
+        name = _clean_item_name(ln)
+        if name:
+            pending_name = name
+
+    return items
 
 
 def parse_fields(text: str) -> dict:
@@ -133,16 +222,8 @@ def parse_fields(text: str) -> dict:
             store = ln
             break
 
-    # 품목: '이름 ... 금액' 형태의 줄을 단순 수집 (정교화는 TODO)
-    items = []
-    for ln in lines:
-        am = re.search(r"([\d]{1,3}(?:,\d{3})+|\d{3,})\s*원?$", ln)
-        name = re.sub(r"([\d]{1,3}(?:,\d{3})+|\d{3,})\s*원?$", "", ln).strip()
-        if am and name and not re.search(r"합\s*계|총\s*액|부\s*가|결제", name):
-            try:
-                items.append({"name": name, "price": _to_int(am.group(1))})
-            except ValueError:
-                pass
+    # 품목: 영수증 품목 영역에서 '이름/가격'을 페어링해 수집.
+    items = parse_items(lines)
 
     return {"store": store, "date": date, "amount": amount, "items": items}
 
