@@ -36,6 +36,7 @@ export function TransactionProvider({ children }) {
   const updateTransaction = useCallback((id, changes) => {
     setTransactions(prev =>
       prev.map(t => t.id === id ? { ...t, ...changes } : t)
+          .sort((a, b) => b.date.localeCompare(a.date))
     )
   }, [])
 

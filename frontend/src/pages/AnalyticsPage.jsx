@@ -154,7 +154,7 @@ export default function AnalyticsPage() {
                     <div
                       style={{
                         ...S.catBar,
-                        width: `${(val / catTotal) * 100}%`,
+                        width: `${catTotal ? (val / catTotal) * 100 : 0}%`,
                         background: CATEGORY_COLORS[cat] || '#94a3b8',
                       }}
                     />
@@ -332,6 +332,7 @@ function BudgetView({ byCat, budgets, setBudgets }) {
   const [draft, setDraft] = useState({})
   const [newCat, setNewCat] = useState('')
   const [newAmt, setNewAmt] = useState('')
+  const [customCatName, setCustomCatName] = useState('')
 
   function startEdit() {
     setDraft(Object.fromEntries(Object.entries(budgets).map(([k, v]) => [k, String(v)])))
@@ -357,11 +358,12 @@ function BudgetView({ byCat, budgets, setBudgets }) {
   }
 
   function handleAdd() {
-    if (!newCat || !newAmt || isNaN(Number(newAmt)) || Number(newAmt) <= 0) return
-    const next = { ...budgets, [newCat]: Number(newAmt) }
+    const catKey = newCat === '__custom__' ? customCatName.trim() : newCat
+    if (!catKey || !newAmt || isNaN(Number(newAmt)) || Number(newAmt) <= 0) return
+    const next = { ...budgets, [catKey]: Number(newAmt) }
     setBudgets(next)
     try { localStorage.setItem('budgets', JSON.stringify(next)) } catch {}
-    setNewCat(''); setNewAmt('')
+    setNewCat(''); setNewAmt(''); setCustomCatName('')
   }
 
   const unusedCats = ALL_CATS.filter(c => !budgets[c])
@@ -444,8 +446,8 @@ function BudgetView({ byCat, budgets, setBudgets }) {
           <input
             style={BG.addInput}
             placeholder="카테고리명"
-            value=""
-            onChange={e => setNewCat(e.target.value)}
+            value={customCatName}
+            onChange={e => setCustomCatName(e.target.value)}
           />
         )}
         <input
