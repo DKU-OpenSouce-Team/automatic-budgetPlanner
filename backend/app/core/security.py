@@ -1,25 +1,46 @@
-"""JWT 발급/검증 및 비밀번호 해싱 (골격)."""
-# from datetime import datetime, timedelta
-# from jose import jwt
-# from passlib.context import CryptContext
-# from app.core.config import settings
+"""JWT 발급/검증 및 비밀번호 해싱."""
+from datetime import datetime, timedelta, timezone
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+
+from app.core.config import settings
+
+_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+_bearer = HTTPBearer()
 
 
 def hash_password(plain: str) -> str:
-    # TODO: passlib 으로 해싱
-    raise NotImplementedError
+    return _pwd_context.hash(plain)
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    # TODO: passlib 으로 검증
-    raise NotImplementedError
+    return _pwd_context.verify(plain, hashed)
 
 
 def create_access_token(user_id: str) -> str:
-    # TODO: jose.jwt 로 토큰 발급 (settings.JWT_SECRET 사용)
-    raise NotImplementedError
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    )
+    payload = {"sub": user_id, "exp": expire}
+    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
 def decode_access_token(token: str) -> dict:
-    # TODO: 토큰 디코드/검증 후 payload 반환
-    raise NotImplementedError
+    try:
+        return jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="유효하지 않은 토큰입니다.",
+        )
+
+
+def get_current_user_id(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer),
+) -> str:
+    """보호된 라우트에서 FastAPI Depends()로 사용하는 인증 의존성."""
+    payload = decode_access_token(credentials.credentials)
+    return payload["sub"]
