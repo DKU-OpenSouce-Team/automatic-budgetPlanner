@@ -17,12 +17,12 @@ env/
 .env.*
 !.env.example
 
+# --- OCR 테스트용 영수증 샘플 (로컬 전용, git 추적 제외) ---
+backend/samples/
+
 # --- 에디터 / OS ---
 .vscode/*
 !.vscode/extensions.json
 .idea/
 .DS_Store
 Thumbs.db
-
-# 참고: CLAUDE 관련 폴더 / 제안서 PDF / report(LaTeX) 는
-# .git/info/exclude (로컬) 에서 별도로 제외 처리됨.
