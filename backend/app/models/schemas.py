@@ -87,3 +87,12 @@ class TransactionUpdateFromClient(BaseModel):
     amount: int | None = None
     date: str | None = None   # YYYY-MM-DD → spent_at으로 매핑
     category: str | None = None
+
+
+# ── 나만의 파일 ───────────────────────────────────────────────────────────────
+
+class FileCreate(BaseModel):
+    """POST /files 요청 바디."""
+    name: str
+    description: str | None = None
+    transaction_ids: list[str]  # 선택한 지출 내역 ID 목록
