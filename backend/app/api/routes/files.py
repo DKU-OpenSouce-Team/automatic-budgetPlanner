@@ -9,6 +9,7 @@ DB 테이블: user_files
   created_at      timestamptz
 """
 import io
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
@@ -41,7 +42,7 @@ def _fetch_transactions(tx_ids: list[str]) -> list[dict]:
     if not tx_ids:
         return []
     sb = get_supabase()
-    return sb.table("transactions").select("*").in_("id", tx_ids).execute().data
+    return sb.table("transactions").select("*").in_("id", tx_ids).execute().data or []
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -57,6 +58,8 @@ def create_file(
         "description": body.description,
         "transaction_ids": body.transaction_ids,
     }).execute()
+    if not result.data:
+        raise HTTPException(status_code=500, detail="파일 생성에 실패했습니다.")
     row = result.data[0]
     return {**row, "count": len(body.transaction_ids)}
 
@@ -115,7 +118,7 @@ def export_file(
     return StreamingResponse(
         io.BytesIO(content),
         media_type=media_type,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"},
     )
 
 
