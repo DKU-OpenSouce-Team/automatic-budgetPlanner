@@ -11,6 +11,7 @@ __pycache__/
 venv/
 env/
 *.egg-info/
+.pytest_cache/
 
 # --- 환경 변수 (키 노출 방지) ---
 .env
