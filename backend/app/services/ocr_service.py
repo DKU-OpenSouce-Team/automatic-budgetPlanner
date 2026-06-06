@@ -284,6 +284,31 @@ def claude_parse(ocr_text: str) -> dict | None:
         return None
 
 
+def _normalize_items(items) -> list[dict]:
+    """items 를 OcrItem(name:str, price:int) 스키마에 맞게 정규화한다.
+
+    Claude 폴백은 가격을 모르면 price=null 을 줄 수 있는데, 이를 그대로 두면
+    OcrResult(items=list[OcrItem]) 검증이 깨져 라우트가 500 을 던진다.
+    price 가 정수로 변환 불가하거나 name 이 비면 해당 품목은 버린다.
+    """
+    normalized: list[dict] = []
+    for it in items or []:
+        if not isinstance(it, dict):
+            continue
+        name = str(it.get("name") or "").strip()
+        if not name:
+            continue
+        try:
+            price_int = int(it.get("price"))
+        except (TypeError, ValueError):
+            try:
+                price_int = int(round(float(str(it.get("price")).replace(",", ""))))
+            except (TypeError, ValueError):
+                continue
+        normalized.append({"name": name, "price": price_int})
+    return normalized
+
+
 # ---------------------------------------------------------------------------
 # 최상위 진입점
 # ---------------------------------------------------------------------------
@@ -310,6 +335,9 @@ def recognize_receipt(image_bytes: bytes, use_fallback: bool = True) -> dict:
                 if not fields.get(key) and improved.get(key):
                     fields[key] = improved[key]
             source = "regex+claude"
+
+    # 폴백이 채운 품목에 price=null 등이 섞이면 OcrResult 검증이 깨지므로 정규화.
+    fields["items"] = _normalize_items(fields.get("items"))
 
     fields["confidence"] = ocr["confidence"]
     fields["elapsed_sec"] = round(time.perf_counter() - started, 2)

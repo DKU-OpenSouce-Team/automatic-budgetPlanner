@@ -1,6 +1,7 @@
 """영수증 업로드 / OCR 라우터."""
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 
+from app.api.routes.transactions import _fmt
 from app.core.security import get_current_user_id
 from app.core.supabase_client import get_supabase
 from app.models.schemas import OcrResult, TransactionFromClient
@@ -45,5 +46,8 @@ def confirm_receipt(
         "amount": body.amount,
         "spent_at": body.date,
         "category": body.category,
+        "note": body.memo,
     }).execute()
-    return result.data[0]
+    if not result.data:
+        raise HTTPException(status_code=500, detail="저장에 실패했습니다.")
+    return _fmt(result.data[0])

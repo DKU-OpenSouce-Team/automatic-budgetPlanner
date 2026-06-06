@@ -56,6 +56,8 @@ def create_transaction(
         "category": body.category,
         "note": body.memo,
     }).execute()
+    if not result.data:
+        raise HTTPException(status_code=500, detail="저장에 실패했습니다.")
     return _fmt(result.data[0])
 
 

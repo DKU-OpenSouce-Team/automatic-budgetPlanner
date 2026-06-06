@@ -23,6 +23,8 @@ def signup(body: UserCreate):
         .insert({"email": body.email, "hashed_password": hashed})
         .execute()
     )
+    if not result.data:
+        raise HTTPException(status_code=500, detail="회원가입에 실패했습니다.")
     new_user = result.data[0]
 
     token = create_access_token(new_user["id"])
