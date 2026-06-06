@@ -27,7 +27,8 @@ def get_reader():
         import easyocr  # 무거운 import 이므로 함수 안에서 지연 로딩
 
         # 한국어 + 영어(숫자/상호 영문 대비). GPU 없으면 CPU 로 동작.
-        _reader = easyocr.Reader(["ko", "en"], gpu=False)
+        # verbose=False: 진행바(█) 출력이 일부 콘솔(cp949 등)에서 인코딩 오류를 일으키는 것 방지.
+        _reader = easyocr.Reader(["ko", "en"], gpu=False, verbose=False)
     return _reader
 
 
