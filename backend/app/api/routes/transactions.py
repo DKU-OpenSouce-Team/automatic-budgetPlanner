@@ -88,6 +88,8 @@ def update_transaction(
         updates["spent_at"] = body.date
     if body.category is not None:
         updates["category"] = body.category
+    if body.memo is not None:
+        updates["note"] = body.memo
 
     if not updates:
         raise HTTPException(status_code=400, detail="수정할 항목이 없습니다.")

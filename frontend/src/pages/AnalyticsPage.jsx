@@ -41,7 +41,7 @@ export default function AnalyticsPage() {
   })
 
   // 이번 달 계산
-  const thisMonth = '2026-06'
+  const thisMonth = new Date().toISOString().substring(0, 7)
   const thisMonthTx = transactions.filter(t => t.date.startsWith(thisMonth))
   const income = thisMonthTx.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0)
   const expense = Math.abs(thisMonthTx.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0))

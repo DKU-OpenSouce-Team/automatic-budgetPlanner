@@ -87,6 +87,7 @@ class TransactionUpdateFromClient(BaseModel):
     amount: int | None = None
     date: str | None = None   # YYYY-MM-DD → spent_at으로 매핑
     category: str | None = None
+    memo: str | None = None   # note로 매핑
 
 
 # ── 나만의 파일 ───────────────────────────────────────────────────────────────

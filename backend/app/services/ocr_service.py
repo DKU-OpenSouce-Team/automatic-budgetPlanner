@@ -305,6 +305,8 @@ def _normalize_items(items) -> list[dict]:
                 price_int = int(round(float(str(it.get("price")).replace(",", ""))))
             except (TypeError, ValueError):
                 continue
+        if price_int <= 0:
+            continue
         normalized.append({"name": name, "price": price_int})
     return normalized
 

@@ -42,7 +42,7 @@ export default function TransactionsPage() {
 
   // ── 프론트 필터 ──
   const filtered = transactions.filter(t => {
-    const matchQ   = q        ? t.store.includes(q) : true
+    const matchQ   = q        ? (t.store ?? '').includes(q) : true
     const matchCat = category ? t.category === category : true
     return matchQ && matchCat
   })
