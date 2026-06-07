@@ -3,6 +3,18 @@
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
+const SESSION_EXPIRED_MSG = '세션이 만료되었습니다. 다시 로그인해주세요.'
+
+// 인증된 요청(토큰 첨부)에 401이 오면 = 토큰 만료/무효.
+// 토큰을 정리하고 로그인 화면으로 보낸다(이미 로그인 화면이면 그대로 둠).
+function expireSession() {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  if (window.location.pathname !== '/login') {
+    window.location.replace('/login')
+  }
+}
+
 async function request(path, options = {}) {
   const token = localStorage.getItem('token')
   const headers = {
@@ -11,6 +23,10 @@ async function request(path, options = {}) {
     ...options.headers,
   }
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers })
+  if (res.status === 401 && token) {
+    expireSession()
+    throw new Error(SESSION_EXPIRED_MSG)
+  }
   if (!res.ok) {
     throw new Error(await extractError(res))
   }
@@ -45,6 +61,7 @@ async function uploadForm(path, formData) {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
   })
+  if (res.status === 401 && token) { expireSession(); throw new Error(SESSION_EXPIRED_MSG) }
   if (!res.ok) throw new Error(await extractError(res))
   return res.status === 204 ? null : res.json()
 }
@@ -55,6 +72,7 @@ async function downloadBlob(path) {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   })
+  if (res.status === 401 && token) { expireSession(); throw new Error(SESSION_EXPIRED_MSG) }
   if (!res.ok) throw new Error(await extractError(res))
   return res.blob()
 }
