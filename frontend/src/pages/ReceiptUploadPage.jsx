@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTransactions } from '../contexts/TransactionContext'
+import { api } from '../api/client'
 
 const TABS = ['영수증 업로드', '수동 작성', 'CSV 업로드']
 
@@ -64,14 +65,7 @@ function ReceiptUpload() {
     try {
       const formData = new FormData()
       formData.append('image', file)
-      const token = localStorage.getItem('token')
-      const res = await fetch('http://localhost:8000/receipts', {
-        method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: formData,
-      })
-      if (!res.ok) throw new Error()
-      const data = await res.json()
+      const data = await api.upload('/receipts', formData)
       setOcrResult(data)
       setStore(data.store || '')
       setAmount(data.amount || '')
@@ -86,16 +80,7 @@ function ReceiptUpload() {
 
   async function handleSave() {
     try {
-      const token = localStorage.getItem('token')
-      const res = await fetch('http://localhost:8000/receipts/confirm', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ store, amount: Number(amount) || 0, date, category }),
-      })
-      if (!res.ok) throw new Error()
+      await api.post('/receipts/confirm', { store, amount: Number(amount) || 0, date, category })
       await refresh()   // 전역 내역 동기화 → 목록/통계 화면에 즉시 반영
       alert('저장되었습니다!')
       setFile(null); setPreview(null); setOcrResult(null)
@@ -113,11 +98,11 @@ function ReceiptUpload() {
           : <div style={styles.uploadPlaceholder}>
               <span style={styles.uploadIcon}>📷</span>
               <p>클릭하여 영수증 이미지 선택</p>
-              <p style={styles.uploadHint}>JPG, PNG, PDF 지원</p>
+              <p style={styles.uploadHint}>JPG, PNG, WEBP 지원</p>
             </div>
         }
       </div>
-      <input id="receipt-input" type="file" accept="image/*,.pdf" style={{ display: 'none' }} onChange={handleFileChange} />
+      <input id="receipt-input" type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={handleFileChange} />
 
       {error && <p style={styles.error}>{error}</p>}
 
@@ -206,17 +191,7 @@ function CsvUpload() {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      const token = localStorage.getItem('token')
-      const res = await fetch('http://localhost:8000/files/csv', {
-        method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: formData,
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => null)
-        throw new Error(body?.detail || '업로드에 실패했습니다.')
-      }
-      const data = await res.json()
+      const data = await api.upload('/files/csv', formData)
       await refresh()   // 전역 내역 동기화
       alert(`가져오기 완료: ${data.inserted}건 추가` +
             (data.duplicates ? ` · 중복 ${data.duplicates}건 제외` : ''))

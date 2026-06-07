@@ -36,6 +36,19 @@ async function extractError(res) {
   return `요청 실패 (${res.status})`
 }
 
+// 파일 업로드용 — FormData(멀티파트) 전송. Content-Type은 지정하지 않아
+// 브라우저가 boundary를 자동으로 붙이게 한다. (예: /receipts, /files/csv)
+async function uploadForm(path, formData) {
+  const token = localStorage.getItem('token')
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  })
+  if (!res.ok) throw new Error(await extractError(res))
+  return res.status === 204 ? null : res.json()
+}
+
 // 파일 다운로드용 — JSON이 아닌 바이너리(Blob)를 받는다. (예: /files/{id}/export)
 async function downloadBlob(path) {
   const token = localStorage.getItem('token')
@@ -51,5 +64,6 @@ export const api = {
   post: (path, body) => request(path, { method: 'POST', body: JSON.stringify(body) }),
   put: (path, body) => request(path, { method: 'PUT', body: JSON.stringify(body) }),
   del: (path) => request(path, { method: 'DELETE' }),
+  upload: (path, formData) => uploadForm(path, formData),
   download: (path) => downloadBlob(path),
 }
