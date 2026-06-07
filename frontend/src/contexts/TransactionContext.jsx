@@ -53,10 +53,11 @@ export function TransactionProvider({ children }) {
   // ── CRUD (모두 API 경유 후 동기화) ──────────────────────
 
   // 추가 — tx: { store, amount, date, category, memo }
+  // amount는 부호 없는 '크기'로 저장한다(표시 부호는 normalize가 category로 부여).
   const addTransaction = useCallback(async (tx) => {
     await api.post('/transactions', {
       store: tx.store,
-      amount: Number(tx.amount),
+      amount: Math.abs(Number(tx.amount)),
       date: tx.date,
       category: tx.category || null,
       memo: tx.memo ?? tx.note ?? null,
@@ -65,10 +66,11 @@ export function TransactionProvider({ children }) {
   }, [refresh])
 
   // 수정 — changes: { store?, amount?, date?, category?, memo? }
+  // 편집 폼이 정규화된 부호값(예: -5000)을 넘겨도 크기로 통일해 음수 저장을 막는다.
   const updateTransaction = useCallback(async (id, changes) => {
     await api.put(`/transactions/${id}`, {
       store: changes.store,
-      amount: changes.amount != null ? Number(changes.amount) : undefined,
+      amount: changes.amount != null ? Math.abs(Number(changes.amount)) : undefined,
       date: changes.date,
       category: changes.category,
       memo: changes.memo ?? changes.note,

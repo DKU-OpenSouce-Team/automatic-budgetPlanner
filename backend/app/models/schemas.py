@@ -88,6 +88,12 @@ class Transaction(TransactionBase):
 # ── 프론트엔드 요청 전용 스키마 ────────────────────────────────────────────────
 # 프론트엔드는 spent_at 대신 date, note 대신 memo 필드명을 사용한다.
 
+# DB는 금액을 부호 없는 '크기'로 저장한다(수입/지출 구분은 category 몫).
+# 음수가 섞이면 analytics 집계(_summarize)가 틀어지므로 입력 단계에서 절대값으로 통일.
+def _to_magnitude(v: int | None) -> int | None:
+    return v if v is None else abs(v)
+
+
 class TransactionFromClient(BaseModel):
     """POST /transactions, POST /receipts/confirm 요청 바디."""
     store: str
@@ -95,6 +101,11 @@ class TransactionFromClient(BaseModel):
     date: str           # YYYY-MM-DD → DB저장 시 spent_at으로 매핑
     category: str | None = None
     memo: str | None = None  # 수동 입력 메모 → note로 매핑
+
+    @field_validator("amount")
+    @classmethod
+    def _normalize_amount(cls, v: int) -> int:
+        return _to_magnitude(v)
 
 
 class TransactionUpdateFromClient(BaseModel):
@@ -104,6 +115,11 @@ class TransactionUpdateFromClient(BaseModel):
     date: str | None = None   # YYYY-MM-DD → spent_at으로 매핑
     category: str | None = None
     memo: str | None = None   # note로 매핑
+
+    @field_validator("amount")
+    @classmethod
+    def _normalize_amount(cls, v: int | None) -> int | None:
+        return _to_magnitude(v)
 
 
 # ── 나만의 파일 ───────────────────────────────────────────────────────────────

@@ -21,7 +21,8 @@ export default function TransactionsPage() {
   function startEdit(tx) {
     setEditId(tx.id)
     setEditStore(tx.store)
-    setEditAmount(String(tx.amount))
+    // 표시값은 부호가 붙어있으므로(지출 -5000) 편집 필드엔 크기(양수)로 보여준다.
+    setEditAmount(String(Math.abs(tx.amount)))
     setEditDate(tx.date)
     setEditCategory(tx.category)
   }
