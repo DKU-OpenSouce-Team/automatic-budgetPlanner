@@ -30,6 +30,7 @@ export default function App() {
               <Route path="/analytics"    element={<RequireAuth><AnalyticsPage /></RequireAuth>} />
               <Route path="/files"        element={<RequireAuth><MyFilesPage /></RequireAuth>} />
               <Route path="/login"        element={<LoginPage />} />
+              <Route path="*"             element={<Navigate to="/" replace />} />
             </Routes>
           </main>
         </div>
@@ -52,7 +53,7 @@ function Navbar() {
 
   function handleLogout() {
     logout()
-    navigate('/login')
+    navigate('/')   // 로그아웃 후 홈으로 (로그인 화면에 머무르지 않도록)
   }
 
   return (
