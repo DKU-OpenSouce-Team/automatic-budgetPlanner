@@ -193,6 +193,8 @@ function ManualEntry() {
 
 // ── 3. CSV 업로드 ───────────────────────────────────────
 function CsvUpload() {
+  const { refresh } = useTransactions()
+  const navigate = useNavigate()
   const [file, setFile] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -210,11 +212,18 @@ function CsvUpload() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
       })
-      if (!res.ok) throw new Error()
-      alert('CSV 업로드 완료!')
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        throw new Error(body?.detail || '업로드에 실패했습니다.')
+      }
+      const data = await res.json()
+      await refresh()   // 전역 내역 동기화
+      alert(`가져오기 완료: ${data.inserted}건 추가` +
+            (data.duplicates ? ` · 중복 ${data.duplicates}건 제외` : ''))
       setFile(null)
-    } catch {
-      setError('업로드에 실패했습니다.')
+      navigate('/transactions')
+    } catch (e) {
+      setError(e.message || '업로드에 실패했습니다.')
     } finally {
       setLoading(false)
     }

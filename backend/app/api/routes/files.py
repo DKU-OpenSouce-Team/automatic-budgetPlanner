@@ -11,13 +11,13 @@ DB 테이블: user_files
 import io
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
 
 from app.core.security import get_current_user_id
 from app.core.supabase_client import get_supabase
 from app.models.schemas import FileCreate
-from app.services import export_service
+from app.services import classify_service, csv_import_service, export_service
 
 router = APIRouter()
 
@@ -62,6 +62,64 @@ def create_file(
         raise HTTPException(status_code=500, detail="파일 생성에 실패했습니다.")
     row = result.data[0]
     return {**row, "count": len(body.transaction_ids)}
+
+
+@router.post("/csv", status_code=status.HTTP_201_CREATED)
+async def import_csv(
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_current_user_id),
+):
+    """은행/카드 거래내역 CSV를 받아 지출 내역으로 가져온다.
+
+    - 컬럼명 유연 매칭(날짜/가게명/출금·입금·금액)으로 파싱.
+    - 수입(입금)은 카테고리 '수입', 그 외는 가게명으로 자동 분류.
+    - 같은 날짜·금액·가게는 기존 내역과 대조해 중복 제외(재업로드 안전).
+    """
+    raw = await file.read()
+    try:
+        parsed = csv_import_service.parse_rows(raw)
+    except Exception:
+        raise HTTPException(status_code=400, detail="CSV를 파싱하지 못했습니다. 파일 형식을 확인해주세요.")
+    if not parsed:
+        raise HTTPException(
+            status_code=400,
+            detail="추가할 거래를 찾지 못했습니다. (날짜·금액 컬럼이 있는지 확인해주세요)",
+        )
+
+    sb = get_supabase()
+    # 중복 제거: 기존 내역의 (가게, 금액, 날짜) 집합과 대조.
+    existing = (
+        sb.table("transactions")
+        .select("store,amount,spent_at")
+        .eq("user_id", user_id)
+        .execute()
+        .data
+        or []
+    )
+    seen = {(r.get("store"), r.get("amount"), str(r.get("spent_at"))) for r in existing}
+
+    rows, duplicates = [], 0
+    for p in parsed:
+        key = (p["store"], p["amount"], p["spent_at"])
+        if key in seen:
+            duplicates += 1
+            continue
+        seen.add(key)
+        category = "수입" if p["is_income"] else classify_service.classify(p["store"])
+        rows.append({
+            "user_id": user_id,
+            "store": p["store"],
+            "amount": p["amount"],
+            "spent_at": p["spent_at"],
+            "category": category,
+            "note": p.get("note"),
+        })
+
+    inserted = 0
+    if rows:
+        result = sb.table("transactions").insert(rows).execute()
+        inserted = len(result.data or [])
+    return {"inserted": inserted, "duplicates": duplicates, "parsed": len(parsed)}
 
 
 @router.get("")
