@@ -1,6 +1,23 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useTransactions } from '../contexts/TransactionContext'
+import { useAuth } from '../contexts/AuthContext'
+
+// 비로그인 미리보기용 예시 데이터 (로그인 시에는 실제 내역으로 대체된다)
+const DEMO_TRANSACTIONS = [
+  { id: 'd1',  store: '스타벅스',   amount: -5500,   date: '2026-06-01', category: '식비' },
+  { id: 'd2',  store: '지하철',     amount: -1400,   date: '2026-06-02', category: '교통' },
+  { id: 'd3',  store: '월급',       amount: 3200000, date: '2026-06-03', category: '수입' },
+  { id: 'd4',  store: '올리브영',   amount: -32000,  date: '2026-06-04', category: '쇼핑' },
+  { id: 'd5',  store: '맥도날드',   amount: -8900,   date: '2026-06-05', category: '식비' },
+  { id: 'd6',  store: '넷플릭스',   amount: -17000,  date: '2026-06-06', category: '구독' },
+  { id: 'd7',  store: 'CU편의점',   amount: -4200,   date: '2026-06-07', category: '식비' },
+  { id: 'd8',  store: '이마트',     amount: -55000,  date: '2026-06-09', category: '식비' },
+  { id: 'd9',  store: '헬스장',     amount: -60000,  date: '2026-06-10', category: '건강' },
+  { id: 'd10', store: '배달의민족', amount: -22000,  date: '2026-06-12', category: '식비' },
+  { id: 'd11', store: '무신사',     amount: -79000,  date: '2026-06-14', category: '쇼핑' },
+  { id: 'd12', store: '부수입',     amount: 450000,  date: '2026-06-15', category: '수입' },
+]
 
 const CATEGORY_COLORS = {
   식비: '#f97316', 교통: '#3b82f6', 쇼핑: '#ec4899',
@@ -13,7 +30,10 @@ const WEEK_DAYS = ['일', '월', '화', '수', '목', '금', '토']
 
 export default function MainPage() {
   const navigate = useNavigate()
-  const { transactions } = useTransactions()         // ← 전역 데이터
+  const { isAuthenticated } = useAuth()
+  const { transactions: realTransactions } = useTransactions()   // ← 전역 데이터
+  // 비로그인 상태에서는 예시 데이터로 미리보기를 보여준다.
+  const transactions = isAuthenticated ? realTransactions : DEMO_TRANSACTIONS
 
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 5, 1))
   const [selectedDate, setSelectedDate] = useState(null)
@@ -59,6 +79,13 @@ export default function MainPage() {
 
   return (
     <div style={S.page}>
+      {!isAuthenticated && (
+        <div style={S.demoBanner}>
+          <span>👋 지금 보이는 내역은 <strong>예시 데이터</strong>입니다.
+            로그인하면 내 가계부가 표시됩니다.</span>
+          <Link to="/login" style={S.demoBtn}>로그인 / 회원가입</Link>
+        </div>
+      )}
       <div style={S.mainGrid}>
 
         {/* ── 왼쪽: 지출 캘린더 ── */}
@@ -239,6 +266,8 @@ function PieChart({ entries, total }) {
 
 const S = {
   page: { maxWidth: 1080, margin: '0 auto', padding: '24px 16px', fontFamily: "'Pretendard','Apple SD Gothic Neo',sans-serif", display: 'flex', flexDirection: 'column', gap: 16 },
+  demoBanner: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '12px 18px', background: '#ede9fe', border: '1px solid #ddd6fe', borderRadius: 12, fontSize: 13, color: '#5b21b6' },
+  demoBtn: { background: '#6d28d9', color: '#fff', textDecoration: 'none', padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' },
   mainGrid: { display: 'grid', gridTemplateColumns: '1fr 360px', gap: 16, alignItems: 'start' },
   rightCol: { display: 'flex', flexDirection: 'column', gap: 16 },
   card: { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: 24, boxShadow: '0 2px 10px rgba(0,0,0,0.04)' },
