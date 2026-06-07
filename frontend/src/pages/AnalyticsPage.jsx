@@ -24,16 +24,12 @@ function buildMonthly(transactions, monthsBack = 6) {
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 const CATEGORY_COLORS = {
-  식비: '#f97316',
-  교통: '#3b82f6',
-  쇼핑: '#ec4899',
-  구독: '#8b5cf6',
-  건강: '#10b981',
-  기타: '#94a3b8',
-  수입: '#22c55e',
+  식비: '#f97316', '카페/간식': '#f59e0b', 편의점: '#10b981',
+  '마트/쇼핑': '#ec4899', '의료/건강': '#ef4444', 교통: '#3b82f6',
+  '문화/여가': '#8b5cf6', 의류: '#06b6d4', 수입: '#22c55e', 기타: '#94a3b8',
 }
 
-const DEFAULT_BUDGETS = { 식비: 200000, 교통: 50000, 쇼핑: 100000, 구독: 30000, 건강: 80000 }
+const DEFAULT_BUDGETS = { 식비: 200000, '카페/간식': 50000, '마트/쇼핑': 100000, 교통: 50000, '의료/건강': 50000, '문화/여가': 30000 }
 
 // ── 헬퍼 ────────────────────────────────────────────────
 function fmt(n) {
@@ -343,7 +339,7 @@ function CompareView({ thisExpense, prevExpense, prevLabel = '전월', thisLabel
 }
 
 // ── 예산 관리 ────────────────────────────────────────────
-const ALL_CATS = ['식비', '교통', '쇼핑', '구독', '건강', '기타']
+const ALL_CATS = ['식비', '카페/간식', '편의점', '마트/쇼핑', '의료/건강', '교통', '문화/여가', '의류', '기타']
 
 function BudgetView({ byCat, budgets, setBudgets }) {
   const [editing, setEditing] = useState(false)

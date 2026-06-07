@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTransactions } from '../contexts/TransactionContext'
 
 const TABS = ['영수증 업로드', '수동 작성', 'CSV 업로드']
+const CATEGORY_OPTIONS = ['식비', '카페/간식', '편의점', '마트/쇼핑', '의료/건강', '교통', '문화/여가', '의류', '수입', '기타']
 
 export default function ReceiptUploadPage() {
   const [tab, setTab] = useState(0)
@@ -136,7 +137,10 @@ function ReceiptUpload() {
             <label style={styles.label}>날짜</label>
             <input style={styles.input} type="date" value={date} onChange={e => setDate(e.target.value)} />
             <label style={styles.label}>카테고리</label>
-            <input style={styles.input} value={category} onChange={e => setCategory(e.target.value)} placeholder="식비, 교통, 쇼핑 등" />
+            <select style={styles.input} value={category} onChange={e => setCategory(e.target.value)}>
+              <option value="">카테고리 선택</option>
+              {CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
           </div>
           <button style={styles.button} onClick={handleSave}>저장</button>
         </div>
@@ -182,7 +186,10 @@ function ManualEntry() {
         <label style={styles.label}>날짜 *</label>
         <input style={styles.input} type="date" value={date} onChange={e => setDate(e.target.value)} />
         <label style={styles.label}>카테고리</label>
-        <input style={styles.input} value={category} onChange={e => setCategory(e.target.value)} placeholder="식비, 교통, 쇼핑 등" />
+        <select style={styles.input} value={category} onChange={e => setCategory(e.target.value)}>
+          <option value="">카테고리 선택</option>
+          {CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
         <label style={styles.label}>메모</label>
         <input style={styles.input} value={memo} onChange={e => setMemo(e.target.value)} placeholder="선택사항" />
       </div>

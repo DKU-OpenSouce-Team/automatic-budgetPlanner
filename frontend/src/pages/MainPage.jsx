@@ -5,26 +5,29 @@ import { useAuth } from '../contexts/AuthContext'
 
 // 비로그인 미리보기용 예시 데이터 (로그인 시에는 실제 내역으로 대체된다)
 const DEMO_TRANSACTIONS = [
-  { id: 'd1',  store: '스타벅스',   amount: -5500,   date: '2026-06-01', category: '식비' },
+  { id: 'd1',  store: '스타벅스',   amount: -5500,   date: '2026-06-01', category: '카페/간식' },
   { id: 'd2',  store: '지하철',     amount: -1400,   date: '2026-06-02', category: '교통' },
   { id: 'd3',  store: '월급',       amount: 3200000, date: '2026-06-03', category: '수입' },
-  { id: 'd4',  store: '올리브영',   amount: -32000,  date: '2026-06-04', category: '쇼핑' },
+  { id: 'd4',  store: '올리브영',   amount: -32000,  date: '2026-06-04', category: '마트/쇼핑' },
   { id: 'd5',  store: '맥도날드',   amount: -8900,   date: '2026-06-05', category: '식비' },
-  { id: 'd6',  store: '넷플릭스',   amount: -17000,  date: '2026-06-06', category: '구독' },
-  { id: 'd7',  store: 'CU편의점',   amount: -4200,   date: '2026-06-07', category: '식비' },
-  { id: 'd8',  store: '이마트',     amount: -55000,  date: '2026-06-09', category: '식비' },
-  { id: 'd9',  store: '헬스장',     amount: -60000,  date: '2026-06-10', category: '건강' },
+  { id: 'd6',  store: '넷플릭스',   amount: -17000,  date: '2026-06-06', category: '기타' },
+  { id: 'd7',  store: 'CU편의점',   amount: -4200,   date: '2026-06-07', category: '편의점' },
+  { id: 'd8',  store: '이마트',     amount: -55000,  date: '2026-06-09', category: '마트/쇼핑' },
+  { id: 'd9',  store: '헬스장',     amount: -60000,  date: '2026-06-10', category: '의료/건강' },
   { id: 'd10', store: '배달의민족', amount: -22000,  date: '2026-06-12', category: '식비' },
-  { id: 'd11', store: '무신사',     amount: -79000,  date: '2026-06-14', category: '쇼핑' },
+  { id: 'd11', store: '무신사',     amount: -79000,  date: '2026-06-14', category: '의류' },
   { id: 'd12', store: '부수입',     amount: 450000,  date: '2026-06-15', category: '수입' },
 ]
 
 const CATEGORY_COLORS = {
-  식비: '#f97316', 교통: '#3b82f6', 쇼핑: '#ec4899',
-  구독: '#8b5cf6', 건강: '#10b981', 기타: '#94a3b8', 수입: '#22c55e',
+  식비: '#f97316', '카페/간식': '#f59e0b', 편의점: '#10b981',
+  '마트/쇼핑': '#ec4899', '의료/건강': '#ef4444', 교통: '#3b82f6',
+  '문화/여가': '#8b5cf6', 의류: '#06b6d4', 수입: '#22c55e', 기타: '#94a3b8',
 }
 const CATEGORY_ICONS = {
-  식비: '🍽️', 교통: '🚌', 쇼핑: '🛍️', 구독: '📺', 건강: '💪', 기타: '📌', 수입: '💰',
+  식비: '🍽️', '카페/간식': '☕', 편의점: '🏪',
+  '마트/쇼핑': '🛍️', '의료/건강': '💊', 교통: '🚌',
+  '문화/여가': '🎭', 의류: '👕', 수입: '💰', 기타: '📌',
 }
 const WEEK_DAYS = ['일', '월', '화', '수', '목', '금', '토']
 
