@@ -36,9 +36,20 @@ async function extractError(res) {
   return `요청 실패 (${res.status})`
 }
 
+// 파일 다운로드용 — JSON이 아닌 바이너리(Blob)를 받는다. (예: /files/{id}/export)
+async function downloadBlob(path) {
+  const token = localStorage.getItem('token')
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) throw new Error(await extractError(res))
+  return res.blob()
+}
+
 export const api = {
   get: (path) => request(path),
   post: (path, body) => request(path, { method: 'POST', body: JSON.stringify(body) }),
   put: (path, body) => request(path, { method: 'PUT', body: JSON.stringify(body) }),
   del: (path) => request(path, { method: 'DELETE' }),
+  download: (path) => downloadBlob(path),
 }
