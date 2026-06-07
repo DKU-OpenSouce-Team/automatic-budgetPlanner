@@ -38,7 +38,10 @@ export default function MainPage() {
   // 비로그인 상태에서는 예시 데이터로 미리보기를 보여준다.
   const transactions = isAuthenticated ? realTransactions : DEMO_TRANSACTIONS
 
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 5, 1))
+  // 로그인 사용자는 실제 현재 달, 비로그인 미리보기는 예시 데이터(2026-06)에 맞춤
+  const [currentMonth, setCurrentMonth] = useState(
+    isAuthenticated ? new Date() : new Date(2026, 5, 1)
+  )
   const [selectedDate, setSelectedDate] = useState(null)
 
   // ── 캘린더 계산 ──
