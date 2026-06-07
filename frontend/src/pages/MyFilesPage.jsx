@@ -317,12 +317,18 @@ export default function MyFilesPage() {
                         <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>내역 없음</p>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          {detail.transactions.map(t => (
-                            <div key={t.id} style={S.detailRow}>
-                              <span style={{ fontSize: 12 }}>{(t.spent_at || t.date || '').slice(0, 10)} · {t.store}</span>
-                              <span style={{ fontSize: 12, fontWeight: 600 }}>{Number(t.amount || 0).toLocaleString()}원</span>
-                            </div>
-                          ))}
+                          {detail.transactions.map(t => {
+                            const isIncome = t.category === '수입'
+                            const signed = isIncome ? Math.abs(Number(t.amount || 0)) : -Math.abs(Number(t.amount || 0))
+                            return (
+                              <div key={t.id} style={S.detailRow}>
+                                <span style={{ fontSize: 12 }}>{(t.date || '').slice(0, 10)} · {t.store}</span>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: isIncome ? '#16a34a' : '#ef4444' }}>
+                                  {isIncome ? '+' : ''}{signed.toLocaleString()}원
+                                </span>
+                              </div>
+                            )
+                          })}
                         </div>
                       )}
                     </div>

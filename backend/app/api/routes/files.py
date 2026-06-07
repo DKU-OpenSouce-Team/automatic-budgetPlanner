@@ -14,6 +14,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
 
+from app.api.routes.transactions import _fmt
 from app.core.security import get_current_user_id
 from app.core.supabase_client import get_supabase
 from app.models.schemas import FileCreate
@@ -154,8 +155,11 @@ def get_file(
     """파일 상세 조회 (파일 정보 + 포함된 지출 내역 목록)."""
     row = _get_owned_file(file_id, user_id)
     tx_ids = row.get("transaction_ids") or []
-    transactions = _fetch_transactions(tx_ids, user_id)
-    total = sum(t.get("amount", 0) for t in transactions)
+    transactions = [_fmt(t) for t in _fetch_transactions(tx_ids, user_id)]
+    total = sum(
+        abs(t["amount"]) if t.get("category") == "수입" else -abs(t["amount"])
+        for t in transactions
+    )
     return {**row, "count": len(tx_ids), "total": total, "transactions": transactions}
 
 
