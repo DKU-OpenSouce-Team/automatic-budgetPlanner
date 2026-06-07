@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTransactions } from '../contexts/TransactionContext'
 import { api } from '../api/client'
 
-const CATEGORY_OPTIONS = ['전체', '식비', '교통', '쇼핑', '구독', '건강', '수입', '기타']
+const CATEGORY_OPTIONS = ['전체', '식비', '카페/간식', '편의점', '마트/쇼핑', '의료/건강', '교통', '문화/여가', '의류', '수입', '기타']
 
 // 백엔드 created_at(ISO) → "YYYY-MM-DD HH:MM"
 function fmtDate(s) {
