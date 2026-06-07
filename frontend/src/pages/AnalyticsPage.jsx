@@ -1,14 +1,26 @@
 import { useState } from 'react'
 import { useTransactions } from '../contexts/TransactionContext'
 
-const MONTHLY_DUMMY = [
-  { month: '1월', income: 3200000, expense: 1420000 },
-  { month: '2월', income: 3200000, expense: 1680000 },
-  { month: '3월', income: 3200000, expense: 1950000 },
-  { month: '4월', income: 3650000, expense: 1320000 },
-  { month: '5월', income: 3200000, expense: 1870000 },
-  { month: '6월', income: 3650000, expense: 299800 },
-]
+// 전역 거래 내역에서 최근 N개월의 월별 수입/지출을 집계한다 (오래된 → 최신 순).
+function buildMonthly(transactions, monthsBack = 6) {
+  const now = new Date()
+  const buckets = []
+  for (let i = monthsBack - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    buckets.push({ ym, month: `${d.getMonth() + 1}월`, income: 0, expense: 0 })
+  }
+  const idx = Object.fromEntries(buckets.map((b, i) => [b.ym, i]))
+  transactions.forEach(t => {
+    const ym = (t.date || '').slice(0, 7)
+    if (ym in idx) {
+      const b = buckets[idx[ym]]
+      if (t.amount > 0) b.income += t.amount
+      else b.expense += Math.abs(t.amount)
+    }
+  })
+  return buckets
+}
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 const CATEGORY_COLORS = {
@@ -65,8 +77,12 @@ export default function AnalyticsPage() {
   })
   const maxDay = Math.max(...byDay)
 
-  // 전월 비교
-  const prevExpense = MONTHLY_DUMMY.find(m => m.month === '5월')?.expense || 0
+  // 월별 추이(최근 6개월) + 전월 비교 — 전역 거래 내역에서 직접 집계
+  const monthlyData = buildMonthly(transactions, 6)
+  const prevBucket = monthlyData[monthlyData.length - 2]
+  const prevExpense = prevBucket ? prevBucket.expense : 0
+  const prevLabel = prevBucket ? prevBucket.month : '전월'
+  const thisLabel = monthlyData[monthlyData.length - 1]?.month || '이번달'
   const expenseDiff = expense - prevExpense
   const expenseDiffPct = prevExpense ? ((expenseDiff / prevExpense) * 100).toFixed(1) : 0
 
@@ -119,12 +135,14 @@ export default function AnalyticsPage() {
 
       {/* ── 탭 콘텐츠 ── */}
       <div style={S.card}>
-        {activeTab === 'monthly' && <MonthlyChart data={MONTHLY_DUMMY} />}
+        {activeTab === 'monthly' && <MonthlyChart data={monthlyData} />}
         {activeTab === 'weekday' && <WeekdayChart byDay={byDay} maxDay={maxDay} />}
         {activeTab === 'compare' && (
           <CompareView
             thisExpense={expense}
             prevExpense={prevExpense}
+            prevLabel={prevLabel}
+            thisLabel={thisLabel}
             diff={expenseDiff}
             diffPct={expenseDiffPct}
             catEntries={catEntries}
@@ -172,7 +190,7 @@ export default function AnalyticsPage() {
 
 // ── 월별 추이 차트 (SVG 막대) ────────────────────────────
 function MonthlyChart({ data }) {
-  const maxVal = Math.max(...data.flatMap(d => [d.income, d.expense]))
+  const maxVal = Math.max(...data.flatMap(d => [d.income, d.expense]), 1)
   const H = 180
   const W = 480
   const padL = 48
@@ -281,15 +299,15 @@ function WeekdayChart({ byDay, maxDay }) {
 }
 
 // ── 전월 비교 ────────────────────────────────────────────
-function CompareView({ thisExpense, prevExpense, diff, diffPct, catEntries, catTotal }) {
-  const maxVal = Math.max(thisExpense, prevExpense)
+function CompareView({ thisExpense, prevExpense, prevLabel = '전월', thisLabel = '이번달', diff, diffPct }) {
+  const maxVal = Math.max(thisExpense, prevExpense, 1)
   return (
     <div>
       <h3 style={S.sectionTitle}>전월 지출 비교</h3>
       <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
         {[
-          { label: '5월 지출', val: prevExpense, color: '#94a3b8' },
-          { label: '6월 지출', val: thisExpense, color: '#6d28d9' },
+          { label: `${prevLabel} 지출`, val: prevExpense, color: '#94a3b8' },
+          { label: `${thisLabel} 지출`, val: thisExpense, color: '#6d28d9' },
         ].map(({ label, val, color }) => (
           <div key={label} style={{ flex: 1 }}>
             <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 6 }}>{label}</p>
