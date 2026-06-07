@@ -243,7 +243,7 @@ export default function MainPage() {
           {/* 파이차트 */}
           <div style={S.card}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, position: 'relative' }}>
-              <h3 style={{ ...S.cardTitle, marginBottom: 0 }}>
+              <h3 style={{ ...S.cardTitle, marginBottom: 0, lineHeight: 1 }}>
                 {pieYear}년 {pieMonthIdx + 1}월 지출 현황
               </h3>
               <div style={{ position: 'relative' }}>
@@ -288,9 +288,9 @@ export default function MainPage() {
                     return (
                       <div key={cat} style={S.legendItem}>
                         <span style={{ ...S.legendDot, background: CATEGORY_COLORS[cat] || '#94a3b8' }} />
-                        <span style={{ fontSize: 13, color: '#374151', flex: 1 }}>{cat}</span>
-                        <span style={{ fontSize: 12, color: '#9ca3af', marginRight: 6 }}>({pct}%)</span>
-                        <span style={{ fontSize: 13, color: '#6b7280' }}>{val.toLocaleString()}원</span>
+                        <span style={{ fontSize: 13, color: '#374151' }}>{cat}</span>
+                        <span style={{ fontSize: 12, color: '#9ca3af', marginLeft: 4 }}>({pct}%)</span>
+                        <span style={{ fontSize: 13, color: '#6b7280', flex: 1, textAlign: 'right' }}>{val.toLocaleString()}원</span>
                       </div>
                     )
                   })
@@ -329,6 +329,15 @@ function PieChart({ entries, total }) {
   const R = 70, cx = 90, cy = 80
   let cumAngle = -Math.PI / 2
   if (!total) return <div style={{ textAlign: 'center', padding: '20px 0', color: '#9ca3af', fontSize: 13 }}>지출 데이터가 없습니다</div>
+  // 항목이 1개일 때는 arc 대신 원으로 그린다 (angle=2π면 시작점=끝점이 같아 SVG arc가 렌더링되지 않는 버그)
+  if (entries.length === 1) {
+    const [cat] = entries[0]
+    return (
+      <svg viewBox="0 0 180 160" width="100%" style={{ display: 'block', maxWidth: 200, margin: '0 auto' }}>
+        <circle cx={cx} cy={cy} r={R} fill={CATEGORY_COLORS[cat] || '#94a3b8'} stroke="#fff" strokeWidth="2" opacity="0.92" />
+      </svg>
+    )
+  }
   return (
     <svg viewBox="0 0 180 160" width="100%" style={{ display: 'block', maxWidth: 200, margin: '0 auto' }}>
       {entries.map(([cat, val]) => {
