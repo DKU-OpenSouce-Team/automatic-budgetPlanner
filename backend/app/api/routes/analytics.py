@@ -124,6 +124,6 @@ def monthly_summary(
         .select("spent_at,amount,category")
         .eq("user_id", user_id)
         .execute()
-        .data
+        .data or []
     )
     return _summarize(rows, year, mon)
