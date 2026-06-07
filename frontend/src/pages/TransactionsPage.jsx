@@ -6,6 +6,10 @@ const CATEGORY_OPTIONS = ['식비', '카페/간식', '편의점', '마트/쇼핑
 export default function TransactionsPage() {
   const { transactions, updateTransaction, deleteTransaction } = useTransactions()
 
+  const now = new Date()
+  const [selYear,  setSelYear]  = useState(now.getFullYear())
+  const [selMonth, setSelMonth] = useState(now.getMonth() + 1)
+
   const [q, setQ]               = useState('')
   const [category, setCategory] = useState('')
   const [editId, setEditId]     = useState(null)
@@ -14,7 +18,6 @@ export default function TransactionsPage() {
   const [editDate, setEditDate]         = useState('')
   const [editCategory, setEditCategory] = useState('')
 
-  // ── 수정 시작 ──
   function startEdit(tx) {
     setEditId(tx.id)
     setEditStore(tx.store)
@@ -23,7 +26,6 @@ export default function TransactionsPage() {
     setEditCategory(tx.category)
   }
 
-  // ── 수정 저장 ── Context 업데이트
   function handleSaveEdit(id) {
     updateTransaction(id, {
       store: editStore,
@@ -34,11 +36,17 @@ export default function TransactionsPage() {
     setEditId(null)
   }
 
-  // ── 삭제 ── Context 업데이트
   function handleDelete(id) {
     if (!confirm('삭제하시겠습니까?')) return
     deleteTransaction(id)
   }
+
+  // ── 선택 월 기준 통계 ──
+  const selMonthStr = `${selYear}-${String(selMonth).padStart(2, '0')}`
+  const selMonthTx  = transactions.filter(t => t.date.startsWith(selMonthStr))
+  const selCount    = selMonthTx.filter(t => t.amount < 0).length
+  const selExpense  = selMonthTx.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0)
+  const selIncome   = selMonthTx.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0)
 
   // ── 프론트 필터 ──
   const filtered = transactions.filter(t => {
@@ -47,12 +55,52 @@ export default function TransactionsPage() {
     return matchQ && matchCat
   })
 
-  const totalExpense = filtered.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0)
-  const totalIncome  = filtered.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0)
+  const years = Array.from({ length: 7 }, (_, i) => now.getFullYear() - 3 + i)
 
   return (
     <section style={styles.container}>
-      <h1 style={styles.title}>지출 내역</h1>
+      {/* 제목 + 년도/월 선택 */}
+      <div style={styles.titleRow}>
+        <h1 style={styles.title}>지출 내역</h1>
+        <div style={styles.monthSelector}>
+          <select
+            style={styles.yearSelect}
+            value={selYear}
+            onChange={e => setSelYear(Number(e.target.value))}
+          >
+            {years.map(y => <option key={y} value={y}>{y}년</option>)}
+          </select>
+          <select
+            style={styles.monthSelect}
+            value={selMonth}
+            onChange={e => setSelMonth(Number(e.target.value))}
+          >
+            {Array.from({ length: 12 }, (_, i) => (
+              <option key={i + 1} value={i + 1}>{i + 1}월</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* 선택 월 요약 카드 */}
+      <div style={styles.summaryRow}>
+        <div style={styles.summaryCard}>
+          <p style={styles.summaryLabel}>{selYear}년 {selMonth}월 건수</p>
+          <p style={styles.summaryValue}>{selCount}건</p>
+        </div>
+        <div style={{ ...styles.summaryCard, borderColor: '#fca5a5' }}>
+          <p style={styles.summaryLabel}>{selYear}년 {selMonth}월 지출</p>
+          <p style={{ ...styles.summaryValue, color: '#ef4444' }}>
+            {selExpense.toLocaleString()}원
+          </p>
+        </div>
+        <div style={{ ...styles.summaryCard, borderColor: '#86efac' }}>
+          <p style={styles.summaryLabel}>{selYear}년 {selMonth}월 수입</p>
+          <p style={{ ...styles.summaryValue, color: '#16a34a' }}>
+            +{selIncome.toLocaleString()}원
+          </p>
+        </div>
+      </div>
 
       {/* 검색/필터 */}
       <div style={styles.searchRow}>
@@ -66,26 +114,6 @@ export default function TransactionsPage() {
           <option value="">전체 카테고리</option>
           {CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
-      </div>
-
-      {/* 요약 카드 */}
-      <div style={styles.summaryRow}>
-        <div style={styles.summaryCard}>
-          <p style={styles.summaryLabel}>총 건수</p>
-          <p style={styles.summaryValue}>{filtered.length}건</p>
-        </div>
-        <div style={{ ...styles.summaryCard, borderColor: '#fca5a5' }}>
-          <p style={styles.summaryLabel}>총 지출</p>
-          <p style={{ ...styles.summaryValue, color: '#ef4444' }}>
-            {totalExpense.toLocaleString()}원
-          </p>
-        </div>
-        <div style={{ ...styles.summaryCard, borderColor: '#86efac' }}>
-          <p style={styles.summaryLabel}>총 수입</p>
-          <p style={{ ...styles.summaryValue, color: '#16a34a' }}>
-            +{totalIncome.toLocaleString()}원
-          </p>
-        </div>
       </div>
 
       {/* 내역 목록 */}
@@ -133,7 +161,11 @@ export default function TransactionsPage() {
 
 const styles = {
   container:    { maxWidth: '700px', margin: '0 auto', padding: '32px 16px', fontFamily: "'Pretendard','Apple SD Gothic Neo',sans-serif" },
-  title:        { fontSize: '24px', fontWeight: '700', marginBottom: '24px' },
+  titleRow:     { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' },
+  title:        { fontSize: '24px', fontWeight: '700', margin: 0 },
+  monthSelector:{ display: 'flex', alignItems: 'center', gap: '8px' },
+  yearSelect:   { padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', cursor: 'pointer', background: '#fff' },
+  monthSelect:  { padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', cursor: 'pointer', background: '#fff' },
   searchRow:    { display: 'flex', gap: '8px', marginBottom: '20px' },
   searchInput:  { flex: 1, padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' },
   select:       { padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' },

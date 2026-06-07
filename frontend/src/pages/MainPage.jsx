@@ -34,15 +34,17 @@ const WEEK_DAYS = ['일', '월', '화', '수', '목', '금', '토']
 export default function MainPage() {
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
-  const { transactions: realTransactions } = useTransactions()   // ← 전역 데이터
-  // 비로그인 상태에서는 예시 데이터로 미리보기를 보여준다.
+  const { transactions: realTransactions } = useTransactions()
   const transactions = isAuthenticated ? realTransactions : DEMO_TRANSACTIONS
 
-  // 로그인 사용자는 실제 현재 달, 비로그인 미리보기는 예시 데이터(2026-06)에 맞춤
-  const [currentMonth, setCurrentMonth] = useState(
-    isAuthenticated ? new Date() : new Date(2026, 5, 1)
-  )
+  const initDate = isAuthenticated ? new Date() : new Date(2026, 5, 1)
+  const [currentMonth, setCurrentMonth] = useState(initDate)
   const [selectedDate, setSelectedDate] = useState(null)
+  const [showMonthPicker, setShowMonthPicker] = useState(false)
+
+  // 파이차트 전용 월 선택 상태 (캘린더와 독립)
+  const [pieMonth, setPieMonth] = useState(initDate)
+  const [showPiePicker, setShowPiePicker] = useState(false)
 
   // ── 캘린더 계산 ──
   const year  = currentMonth.getFullYear()
@@ -62,16 +64,20 @@ export default function MainPage() {
 
   const selectedTx = selectedDate ? (txByDate[selectedDate] || []) : []
 
-  // ── 이번 달 계산 ──
+  // ── 캘린더 달 기준 계산 ──
   const thisMonthStr = `${year}-${String(month + 1).padStart(2, '0')}`
   const thisMonthTx  = transactions.filter(t => t.date.startsWith(thisMonthStr))
   const expense      = Math.abs(thisMonthTx.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0))
   const income       = thisMonthTx.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0)
   const thisMonthCount = thisMonthTx.filter(t => t.amount < 0).length
 
-  // ── 파이차트 ──
+  // ── 파이차트 (pieMonth 기준으로 독립 계산) ──
+  const pieYear     = pieMonth.getFullYear()
+  const pieMonthIdx = pieMonth.getMonth()
+  const pieMonthStr = `${pieYear}-${String(pieMonthIdx + 1).padStart(2, '0')}`
+  const pieMonthTx  = transactions.filter(t => t.date.startsWith(pieMonthStr))
   const byCat = {}
-  thisMonthTx.filter(t => t.amount < 0).forEach(t => {
+  pieMonthTx.filter(t => t.amount < 0).forEach(t => {
     byCat[t.category] = (byCat[t.category] || 0) + Math.abs(t.amount)
   })
   const catEntries = Object.entries(byCat).sort((a, b) => b[1] - a[1])
@@ -98,7 +104,41 @@ export default function MainPage() {
         <div style={S.card}>
           <div style={S.calHeader}>
             <button style={S.navBtn} onClick={() => setCurrentMonth(new Date(year, month - 1, 1))}>‹</button>
-            <h2 style={S.calTitle}>지출 캘린더 &nbsp;·&nbsp; {year}년 {month + 1}월</h2>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h2 style={S.calTitle}>지출 캘린더 &nbsp;·&nbsp; {year}년 {month + 1}월</h2>
+              <button
+                style={S.pickerBtn}
+                onClick={() => setShowMonthPicker(v => !v)}
+                title="월 선택"
+              >
+                🗓️
+              </button>
+              {showMonthPicker && (
+                <div style={S.pickerPopup}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <button style={S.pickerNavBtn} onClick={() => setCurrentMonth(new Date(year - 1, month, 1))}>‹</button>
+                    <span style={{ fontSize: 14, fontWeight: 700 }}>{year}년</span>
+                    <button style={S.pickerNavBtn} onClick={() => setCurrentMonth(new Date(year + 1, month, 1))}>›</button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <button
+                        key={i}
+                        style={{
+                          ...S.pickerMonthBtn,
+                          background: i === month ? '#6d28d9' : '#f3f4f6',
+                          color: i === month ? '#fff' : '#374151',
+                          fontWeight: i === month ? 700 : 400,
+                        }}
+                        onClick={() => { setCurrentMonth(new Date(year, i, 1)); setShowMonthPicker(false) }}
+                      >
+                        {i + 1}월
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             <button style={S.navBtn} onClick={() => setCurrentMonth(new Date(year, month + 1, 1))}>›</button>
           </div>
 
@@ -200,24 +240,60 @@ export default function MainPage() {
             </div>
           </div>
 
-          {/* 이번 달 지출 현황 */}
+          {/* 파이차트 */}
           <div style={S.card}>
-            <h3 style={S.cardTitle}>이번 달 지출 현황</h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, position: 'relative' }}>
+              <h3 style={{ ...S.cardTitle, marginBottom: 0 }}>
+                {pieYear}년 {pieMonthIdx + 1}월 지출 현황
+              </h3>
+              <div style={{ position: 'relative' }}>
+                <button style={S.pickerBtn} onClick={() => setShowPiePicker(v => !v)} title="월 선택">🗓️</button>
+                {showPiePicker && (
+                  <div style={{ ...S.pickerPopup, right: 0, left: 'auto' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <button style={S.pickerNavBtn} onClick={() => setPieMonth(new Date(pieYear - 1, pieMonthIdx, 1))}>‹</button>
+                      <span style={{ fontSize: 14, fontWeight: 700 }}>{pieYear}년</span>
+                      <button style={S.pickerNavBtn} onClick={() => setPieMonth(new Date(pieYear + 1, pieMonthIdx, 1))}>›</button>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+                      {Array.from({ length: 12 }, (_, i) => (
+                        <button
+                          key={i}
+                          style={{
+                            ...S.pickerMonthBtn,
+                            background: i === pieMonthIdx ? '#6d28d9' : '#f3f4f6',
+                            color: i === pieMonthIdx ? '#fff' : '#374151',
+                            fontWeight: i === pieMonthIdx ? 700 : 400,
+                          }}
+                          onClick={() => { setPieMonth(new Date(pieYear, i, 1)); setShowPiePicker(false) }}
+                        >
+                          {i + 1}월
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
             <PieChart entries={catEntries} total={catTotal} />
             <div style={{ marginTop: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid #f3f4f6' }}>
                 <span style={{ fontSize: 14, fontWeight: 600 }}>총 지출</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#ef4444' }}>{expense.toLocaleString()}원</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#ef4444' }}>{catTotal.toLocaleString()}원</span>
               </div>
               {catEntries.length === 0
-                ? <p style={S.emptyText}>이번 달 지출 내역이 없습니다.</p>
-                : catEntries.map(([cat, val]) => (
-                  <div key={cat} style={S.legendItem}>
-                    <span style={{ ...S.legendDot, background: CATEGORY_COLORS[cat] || '#94a3b8' }} />
-                    <span style={{ fontSize: 13, color: '#374151', flex: 1 }}>{cat}</span>
-                    <span style={{ fontSize: 13, color: '#6b7280' }}>{val.toLocaleString()}원</span>
-                  </div>
-                ))
+                ? <p style={S.emptyText}>이 달의 지출 내역이 없습니다.</p>
+                : catEntries.map(([cat, val]) => {
+                    const pct = catTotal ? Math.round((val / catTotal) * 100) : 0
+                    return (
+                      <div key={cat} style={S.legendItem}>
+                        <span style={{ ...S.legendDot, background: CATEGORY_COLORS[cat] || '#94a3b8' }} />
+                        <span style={{ fontSize: 13, color: '#374151', flex: 1 }}>{cat}</span>
+                        <span style={{ fontSize: 12, color: '#9ca3af', marginRight: 6 }}>({pct}%)</span>
+                        <span style={{ fontSize: 13, color: '#6b7280' }}>{val.toLocaleString()}원</span>
+                      </div>
+                    )
+                  })
               }
             </div>
           </div>
@@ -281,6 +357,10 @@ const S = {
   calHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   calTitle:  { fontSize: 16, fontWeight: 700, margin: 0, color: '#111827' },
   navBtn: { background: '#f3f4f6', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  pickerBtn: { background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 },
+  pickerPopup: { position: 'absolute', top: '110%', left: 0, zIndex: 200, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 180 },
+  pickerNavBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: '2px 6px', borderRadius: 6, color: '#374151' },
+  pickerMonthBtn: { border: 'none', borderRadius: 8, padding: '6px 4px', cursor: 'pointer', fontSize: 13, transition: 'background 0.15s' },
   calGrid: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 },
   calDayLabel: { fontSize: 12, fontWeight: 600, textAlign: 'center', paddingBottom: 10 },
   calCell: { minHeight: 58, borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '7px 2px 4px', cursor: 'pointer', transition: 'background 0.15s', gap: 2 },

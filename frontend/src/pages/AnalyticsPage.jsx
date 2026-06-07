@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useTransactions } from '../contexts/TransactionContext'
 
-// 전역 거래 내역에서 최근 N개월의 월별 수입/지출을 집계한다 (오래된 → 최신 순).
 function buildMonthly(transactions, monthsBack = 6) {
   const now = new Date()
   const buckets = []
@@ -31,7 +30,6 @@ const CATEGORY_COLORS = {
 
 const DEFAULT_BUDGETS = { 식비: 200000, '카페/간식': 50000, '마트/쇼핑': 100000, 교통: 50000, '의료/건강': 50000, '문화/여가': 30000 }
 
-// ── 헬퍼 ────────────────────────────────────────────────
 function fmt(n) {
   return Math.abs(n).toLocaleString() + '원'
 }
@@ -40,7 +38,7 @@ function fmtSigned(n) {
 }
 
 export default function AnalyticsPage() {
-  const { transactions } = useTransactions()          // ← 전역 데이터
+  const { transactions } = useTransactions()
   const [activeTab, setActiveTab] = useState('monthly')
   const [animIn, setAnimIn] = useState(true)
   const [budgets, setBudgets] = useState(() => {
@@ -48,18 +46,26 @@ export default function AnalyticsPage() {
     catch { return DEFAULT_BUDGETS }
   })
 
-  // 이번 달 계산
-  const thisMonth = new Date().toISOString().substring(0, 7)
-  const thisMonthTx = transactions.filter(t => t.date.startsWith(thisMonth))
-  const income = thisMonthTx.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0)
-  const expense = Math.abs(thisMonthTx.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0))
+  // ── 년도/월 선택 상태 ──
+  const now = new Date()
+  const [selYear,  setSelYear]  = useState(now.getFullYear())
+  const [selMonth, setSelMonth] = useState(now.getMonth() + 1)
+  const years = Array.from({ length: 7 }, (_, i) => now.getFullYear() - 3 + i)
+
+  // 선택 월 계산
+  const selMonthStr   = `${selYear}-${String(selMonth).padStart(2, '0')}`
+  const selMonthTxAll = transactions.filter(t => t.date.startsWith(selMonthStr))
+  const income     = selMonthTxAll.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0)
+  const expense    = Math.abs(selMonthTxAll.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0))
   const netSavings = income - expense
-  const days = new Date().getDate()
-  const dailyAvg = expense / days
+  const daysInSelMonth = selYear === now.getFullYear() && selMonth === now.getMonth() + 1
+    ? now.getDate()
+    : new Date(selYear, selMonth, 0).getDate()
+  const dailyAvg = expense / (daysInSelMonth || 1)
 
   // 카테고리별 지출
   const byCat = {}
-  thisMonthTx.filter(t => t.amount < 0).forEach(t => {
+  selMonthTxAll.filter(t => t.amount < 0).forEach(t => {
     byCat[t.category] = (byCat[t.category] || 0) + Math.abs(t.amount)
   })
   const catEntries = Object.entries(byCat).sort((a, b) => b[1] - a[1])
@@ -67,13 +73,13 @@ export default function AnalyticsPage() {
 
   // 요일별
   const byDay = Array(7).fill(0)
-  thisMonthTx.filter(t => t.amount < 0).forEach(t => {
+  selMonthTxAll.filter(t => t.amount < 0).forEach(t => {
     const d = new Date(t.date).getDay()
     byDay[d] += Math.abs(t.amount)
   })
   const maxDay = Math.max(...byDay)
 
-  // 월별 추이(최근 6개월) + 전월 비교 — 전역 거래 내역에서 직접 집계
+  // 월별 추이 + 전월 비교
   const monthlyData = buildMonthly(transactions, 6)
   const prevBucket = monthlyData[monthlyData.length - 2]
   const prevExpense = prevBucket ? prevBucket.expense : 0
@@ -82,16 +88,36 @@ export default function AnalyticsPage() {
   const expenseDiff = expense - prevExpense
   const expenseDiffPct = prevExpense ? ((expenseDiff / prevExpense) * 100).toFixed(1) : 0
 
-
   return (
     <section style={S.page}>
-      <h1 style={S.pageTitle}>분석 &amp; 통계</h1>
+      {/* 제목 + 년도/월 선택 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <h1 style={{ ...S.pageTitle, marginBottom: 0 }}>분석 &amp; 통계</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <select
+            style={AS.yearSelect}
+            value={selYear}
+            onChange={e => { setSelYear(Number(e.target.value)); setAnimIn(false); setTimeout(() => setAnimIn(true), 50) }}
+          >
+            {years.map(y => <option key={y} value={y}>{y}년</option>)}
+          </select>
+          <select
+            style={AS.monthSelect}
+            value={selMonth}
+            onChange={e => { setSelMonth(Number(e.target.value)); setAnimIn(false); setTimeout(() => setAnimIn(true), 50) }}
+          >
+            {Array.from({ length: 12 }, (_, i) => (
+              <option key={i + 1} value={i + 1}>{i + 1}월</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       {/* ── KPI 카드 4개 ── */}
       <div style={S.kpiRow}>
         {[
-          { label: '이번달 수입', value: fmtSigned(income), color: '#16a34a', icon: '💰' },
-          { label: '이번달 지출', value: '-' + fmt(expense), color: '#ef4444', icon: '💸' },
+          { label: `${selMonth}월 수입`, value: fmtSigned(income), color: '#16a34a', icon: '💰' },
+          { label: `${selMonth}월 지출`, value: '-' + fmt(expense), color: '#ef4444', icon: '💸' },
           { label: '순 저축', value: fmtSigned(netSavings), color: netSavings >= 0 ? '#6d28d9' : '#ef4444', icon: '🏦' },
           { label: '일평균 지출', value: Math.round(dailyAvg).toLocaleString() + '원', color: '#f97316', icon: '📅' },
         ].map((k, i) => (
@@ -184,13 +210,10 @@ export default function AnalyticsPage() {
   )
 }
 
-// ── 월별 추이 차트 (SVG 막대) ────────────────────────────
+// ── 월별 추이 차트 ────────────────────────────────────────
 function MonthlyChart({ data }) {
   const maxVal = Math.max(...data.flatMap(d => [d.income, d.expense]), 1)
-  const H = 180
-  const W = 480
-  const padL = 48
-  const padB = 28
+  const H = 180, W = 480, padL = 48, padB = 28
   const innerW = W - padL - 16
   const innerH = H - padB - 8
   const colW = innerW / data.length
@@ -205,7 +228,6 @@ function MonthlyChart({ data }) {
       </div>
       <div style={{ overflowX: 'auto' }}>
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ minWidth: 320 }}>
-          {/* Y축 가이드라인 */}
           {[0, 0.25, 0.5, 0.75, 1].map(r => {
             const y = 8 + innerH * (1 - r)
             return (
@@ -217,7 +239,6 @@ function MonthlyChart({ data }) {
               </g>
             )
           })}
-          {/* 막대 */}
           {data.map((d, i) => {
             const cx = padL + colW * i + colW / 2
             const incH = (d.income / maxVal) * innerH
@@ -230,20 +251,14 @@ function MonthlyChart({ data }) {
               </g>
             )
           })}
-          {/* 순저축 꺾은선 */}
           {data.map((d, i) => {
             const cx = padL + colW * i + colW / 2
             const net = d.income - d.expense
             const netH = (Math.max(0, net) / maxVal) * innerH
-            return (
-              <circle key={i} cx={cx} cy={8 + innerH - netH} r="4" fill="#6d28d9" stroke="#fff" strokeWidth="1.5" />
-            )
+            return <circle key={i} cx={cx} cy={8 + innerH - netH} r="4" fill="#6d28d9" stroke="#fff" strokeWidth="1.5" />
           })}
           <polyline
-            fill="none"
-            stroke="#6d28d9"
-            strokeWidth="2"
-            strokeDasharray="4 2"
+            fill="none" stroke="#6d28d9" strokeWidth="2" strokeDasharray="4 2"
             points={data.map((d, i) => {
               const cx = padL + colW * i + colW / 2
               const net = d.income - d.expense
@@ -270,16 +285,7 @@ function WeekdayChart({ byDay, maxDay }) {
           return (
             <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', gap: 4 }}>
               <span style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>{val ? Math.round(val / 1000) + 'k' : '-'}</span>
-              <div
-                style={{
-                  width: '60%',
-                  height: `${Math.max(pct * 120, val ? 6 : 0)}px`,
-                  background: isWeekend ? '#ec4899' : '#6d28d9',
-                  borderRadius: '4px 4px 0 0',
-                  transition: 'height 0.6s ease',
-                  opacity: 0.85,
-                }}
-              />
+              <div style={{ width: '60%', height: `${Math.max(pct * 120, val ? 6 : 0)}px`, background: isWeekend ? '#ec4899' : '#6d28d9', borderRadius: '4px 4px 0 0', transition: 'height 0.6s ease', opacity: 0.85 }} />
               <span style={{ fontSize: 13, fontWeight: isWeekend ? 700 : 400, color: isWeekend ? '#ec4899' : '#374151' }}>
                 {DAY_LABELS[i]}
               </span>
@@ -287,9 +293,7 @@ function WeekdayChart({ byDay, maxDay }) {
           )
         })}
       </div>
-      <p style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center' }}>
-        분홍색: 주말 / 보라색: 평일
-      </p>
+      <p style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center' }}>분홍색: 주말 / 보라색: 평일</p>
     </div>
   )
 }
@@ -314,16 +318,7 @@ function CompareView({ thisExpense, prevExpense, prevLabel = '전월', thisLabel
           </div>
         ))}
       </div>
-      <div style={{
-        padding: '14px 18px',
-        borderRadius: 10,
-        background: diff > 0 ? '#fef2f2' : '#f0fdf4',
-        border: `1px solid ${diff > 0 ? '#fca5a5' : '#86efac'}`,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        marginBottom: 20,
-      }}>
+      <div style={{ padding: '14px 18px', borderRadius: 10, background: diff > 0 ? '#fef2f2' : '#f0fdf4', border: `1px solid ${diff > 0 ? '#fca5a5' : '#86efac'}`, display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
         <span style={{ fontSize: 22 }}>{diff > 0 ? '📈' : '📉'}</span>
         <div>
           <p style={{ fontWeight: 700, color: diff > 0 ? '#ef4444' : '#16a34a', margin: 0 }}>
@@ -394,7 +389,6 @@ function BudgetView({ byCat, budgets, setBudgets }) {
           : <button style={BG.editBtn} onClick={startEdit}>✏️ 예산 수정</button>
         }
       </div>
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {Object.entries(budgets).map(([cat, budget]) => {
           const spent = byCat[cat] || 0
@@ -410,12 +404,7 @@ function BudgetView({ byCat, budgets, setBudgets }) {
                 </div>
                 {editing ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <input
-                      style={BG.budgetInput}
-                      type="number"
-                      value={draft[cat] ?? String(budget)}
-                      onChange={e => setDraft(prev => ({ ...prev, [cat]: e.target.value }))}
-                    />
+                    <input style={BG.budgetInput} type="number" value={draft[cat] ?? String(budget)} onChange={e => setDraft(prev => ({ ...prev, [cat]: e.target.value }))} />
                     <span style={{ fontSize: 12, color: '#9ca3af' }}>원</span>
                     <button style={BG.deleteBtn} onClick={() => handleDelete(cat)}>✕</button>
                   </div>
@@ -426,10 +415,7 @@ function BudgetView({ byCat, budgets, setBudgets }) {
                 )}
               </div>
               <div style={{ background: '#f3f4f6', borderRadius: 6, height: 10, overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%', width: `${pct}%`,
-                  background: color, borderRadius: 6, transition: 'width 0.8s ease',
-                }} />
+                <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 6, transition: 'width 0.8s ease' }} />
               </div>
               {!editing && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
@@ -444,33 +430,16 @@ function BudgetView({ byCat, budgets, setBudgets }) {
           )
         })}
       </div>
-
-      {/* 카테고리 추가 */}
       <div style={BG.addRow}>
-        <select
-          style={BG.addSelect}
-          value={newCat}
-          onChange={e => setNewCat(e.target.value)}
-        >
+        <select style={BG.addSelect} value={newCat} onChange={e => setNewCat(e.target.value)}>
           <option value="">카테고리 선택</option>
           {unusedCats.map(c => <option key={c} value={c}>{c}</option>)}
           <option value="__custom__">직접 입력</option>
         </select>
         {newCat === '__custom__' && (
-          <input
-            style={BG.addInput}
-            placeholder="카테고리명"
-            value={customCatName}
-            onChange={e => setCustomCatName(e.target.value)}
-          />
+          <input style={BG.addInput} placeholder="카테고리명" value={customCatName} onChange={e => setCustomCatName(e.target.value)} />
         )}
-        <input
-          style={BG.addInput}
-          type="number"
-          placeholder="예산 금액"
-          value={newAmt}
-          onChange={e => setNewAmt(e.target.value)}
-        />
+        <input style={BG.addInput} type="number" placeholder="예산 금액" value={newAmt} onChange={e => setNewAmt(e.target.value)} />
         <span style={{ fontSize: 12, color: '#9ca3af', whiteSpace: 'nowrap' }}>원</span>
         <button style={BG.addBtn} onClick={handleAdd}>+ 추가</button>
       </div>
@@ -492,34 +461,20 @@ const BG = {
 
 // ── 도넛 차트 (SVG) ──────────────────────────────────────
 function DonutChart({ entries, total }) {
-  const R = 60
-  const cx = 80
-  const cy = 80
+  const R = 60, cx = 80, cy = 80
   let cumAngle = -Math.PI / 2
-
   return (
     <svg viewBox="0 0 200 160" width="100%" style={{ maxWidth: 240, display: 'block', margin: '0 auto' }}>
       {entries.map(([cat, val]) => {
         const angle = (val / total) * Math.PI * 2
-        const x1 = cx + R * Math.cos(cumAngle)
-        const y1 = cy + R * Math.sin(cumAngle)
+        const x1 = cx + R * Math.cos(cumAngle), y1 = cy + R * Math.sin(cumAngle)
         cumAngle += angle
-        const x2 = cx + R * Math.cos(cumAngle)
-        const y2 = cy + R * Math.sin(cumAngle)
-        const large = angle > Math.PI ? 1 : 0
-        const color = CATEGORY_COLORS[cat] || '#94a3b8'
+        const x2 = cx + R * Math.cos(cumAngle), y2 = cy + R * Math.sin(cumAngle)
         return (
-          <path
-            key={cat}
-            d={`M ${cx} ${cy} L ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2} Z`}
-            fill={color}
-            opacity="0.88"
-            stroke="#fff"
-            strokeWidth="2"
-          />
+          <path key={cat} d={`M ${cx} ${cy} L ${x1} ${y1} A ${R} ${R} 0 ${angle > Math.PI ? 1 : 0} 1 ${x2} ${y2} Z`}
+            fill={CATEGORY_COLORS[cat] || '#94a3b8'} opacity="0.88" stroke="#fff" strokeWidth="2" />
         )
       })}
-      {/* 도넛 구멍 */}
       <circle cx={cx} cy={cy} r={R * 0.5} fill="white" />
       <text x={cx} y={cy - 6} textAnchor="middle" fontSize="10" fill="#9ca3af">지출 합계</text>
       <text x={cx} y={cy + 10} textAnchor="middle" fontSize="12" fontWeight="bold" fill="#374151">
@@ -539,7 +494,7 @@ const S = {
   kpiLabel: { fontSize: 12, color: '#9ca3af', margin: '6px 0 4px', fontWeight: 500 },
   kpiValue: { fontSize: 18, fontWeight: 800, margin: 0 },
   tabRow: { display: 'flex', borderBottom: '2px solid #e5e7eb', marginBottom: 20, gap: 0 },
-  tab: { flex: 1, padding: '10px 8px', background: 'none',  border: 'none', borderBottom: '2px solid transparent', cursor: 'pointer', fontSize: 13, color: '#9ca3af', fontWeight: 500, whiteSpace: 'nowrap' },
+  tab: { flex: 1, padding: '10px 8px', background: 'none', border: 'none', borderBottom: '2px solid transparent', cursor: 'pointer', fontSize: 13, color: '#9ca3af', fontWeight: 500, whiteSpace: 'nowrap' },
   tabActive: { color: '#6d28d9', borderBottom: '2px solid #6d28d9', marginBottom: -2, fontWeight: 700 },
   card: { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: 22, marginBottom: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.04)' },
   sectionTitle: { fontSize: 15, fontWeight: 700, marginBottom: 16, color: '#111827' },
@@ -555,4 +510,9 @@ const S = {
   catAmt: { fontSize: 13, fontWeight: 600, color: '#374151', minWidth: 70, textAlign: 'right' },
   legend: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#6b7280' },
   legendDot: { width: 10, height: 10, borderRadius: '50%', display: 'inline-block' },
+}
+
+const AS = {
+  yearSelect:  { padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '10px', fontSize: '14px', fontFamily: 'inherit', cursor: 'pointer', background: '#fff', fontWeight: 600, color: '#374151' },
+  monthSelect: { padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '10px', fontSize: '14px', fontFamily: 'inherit', cursor: 'pointer', background: '#fff', fontWeight: 600, color: '#374151' },
 }
