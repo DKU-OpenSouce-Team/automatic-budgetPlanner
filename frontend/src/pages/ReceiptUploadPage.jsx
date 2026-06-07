@@ -9,9 +9,11 @@ const CATEGORY_OPTIONS = ['식비', '카페/간식', '편의점', '마트/쇼핑
 
 function isFutureDate(dateStr) {
   if (!dateStr) return false
+  const [year, month, day] = dateStr.split('-').map(Number)
+  const selected = new Date(year, month - 1, day)
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  return new Date(dateStr) > today
+  return selected > today
 }
 
 export default function ReceiptUploadPage() {
