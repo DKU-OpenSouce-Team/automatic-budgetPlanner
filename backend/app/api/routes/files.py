@@ -37,12 +37,19 @@ def _get_owned_file(file_id: str, user_id: str) -> dict:
     return result.data[0]
 
 
-def _fetch_transactions(tx_ids: list[str]) -> list[dict]:
-    """transaction_ids 목록으로 지출 내역을 조회한다."""
+def _fetch_transactions(tx_ids: list[str], user_id: str) -> list[dict]:
+    """transaction_ids 목록으로 지출 내역을 조회한다 (본인 소유만)."""
     if not tx_ids:
         return []
     sb = get_supabase()
-    return sb.table("transactions").select("*").in_("id", tx_ids).execute().data or []
+    return (
+        sb.table("transactions")
+        .select("*")
+        .in_("id", tx_ids)
+        .eq("user_id", user_id)
+        .execute()
+        .data or []
+    )
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -147,7 +154,7 @@ def get_file(
     """파일 상세 조회 (파일 정보 + 포함된 지출 내역 목록)."""
     row = _get_owned_file(file_id, user_id)
     tx_ids = row.get("transaction_ids") or []
-    transactions = _fetch_transactions(tx_ids)
+    transactions = _fetch_transactions(tx_ids, user_id)
     total = sum(t.get("amount", 0) for t in transactions)
     return {**row, "count": len(tx_ids), "total": total, "transactions": transactions}
 
@@ -161,7 +168,7 @@ def export_file(
     """파일을 Excel(xlsx) 또는 CSV로 다운로드한다. fmt=xlsx|csv (기본: xlsx)."""
     row = _get_owned_file(file_id, user_id)
     tx_ids = row.get("transaction_ids") or []
-    transactions = _fetch_transactions(tx_ids)
+    transactions = _fetch_transactions(tx_ids, user_id)
     file_name = row.get("name", "가계부")
 
     if fmt == "csv":

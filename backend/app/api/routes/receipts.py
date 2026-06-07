@@ -11,7 +11,10 @@ router = APIRouter()
 
 
 @router.post("", response_model=OcrResult)
-async def upload_receipt(image: UploadFile = File(...)):
+async def upload_receipt(
+    image: UploadFile = File(...),
+    _: str = Depends(get_current_user_id),
+):
     """영수증 이미지를 받아 OCR 인식 + 카테고리 분류 결과를 반환한다.
 
     프론트엔드는 이 결과를 사용자에게 보여주고, 사용자가 확인/수정한 뒤
