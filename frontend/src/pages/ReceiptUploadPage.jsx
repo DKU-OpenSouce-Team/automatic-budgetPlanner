@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useTransactions } from '../contexts/TransactionContext'
 
 const TABS = ['영수증 업로드', '수동 작성', 'CSV 업로드']
 
@@ -32,6 +34,8 @@ export default function ReceiptUploadPage() {
 
 // ── 1. 영수증 업로드 + OCR ──────────────────────────────
 function ReceiptUpload() {
+  const { refresh } = useTransactions()
+  const navigate = useNavigate()
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
   const [ocrResult, setOcrResult] = useState(null)
@@ -89,11 +93,13 @@ function ReceiptUpload() {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ store, amount, date, category }),
+        body: JSON.stringify({ store, amount: Number(amount) || 0, date, category }),
       })
       if (!res.ok) throw new Error()
+      await refresh()   // 전역 내역 동기화 → 목록/통계 화면에 즉시 반영
       alert('저장되었습니다!')
       setFile(null); setPreview(null); setOcrResult(null)
+      navigate('/transactions')
     } catch {
       setError('저장에 실패했습니다.')
     }
@@ -141,6 +147,8 @@ function ReceiptUpload() {
 
 // ── 2. 수동 작성 ────────────────────────────────────────
 function ManualEntry() {
+  const { addTransaction } = useTransactions()
+  const navigate = useNavigate()
   const [store, setStore] = useState('')
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState('')
@@ -152,18 +160,11 @@ function ManualEntry() {
     if (!store || !amount || !date) { setError('가게명, 금액, 날짜는 필수입니다.'); return }
     setError('')
     try {
-      const token = localStorage.getItem('token')
-      const res = await fetch('http://localhost:8000/transactions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ store, amount, date, category, memo }),
-      })
-      if (!res.ok) throw new Error()
+      // 컨텍스트 경유로 저장(POST /transactions) → 전역 내역 즉시 동기화
+      await addTransaction({ store, amount, date, category, memo })
       alert('저장되었습니다!')
       setStore(''); setAmount(''); setDate(''); setCategory(''); setMemo('')
+      navigate('/transactions')
     } catch {
       setError('저장에 실패했습니다.')
     }

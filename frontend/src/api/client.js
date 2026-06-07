@@ -12,10 +12,28 @@ async function request(path, options = {}) {
   }
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers })
   if (!res.ok) {
-    // TODO: 에러 처리 정교화
-    throw new Error(`API 오류: ${res.status}`)
+    throw new Error(await extractError(res))
   }
   return res.status === 204 ? null : res.json()
+}
+
+// FastAPI 에러 응답에서 사람이 읽을 메시지를 뽑는다.
+// - HTTPException: { detail: "문자열" }
+// - 검증 실패(422): { detail: [{ loc, msg, ... }] }
+async function extractError(res) {
+  try {
+    const body = await res.json()
+    const d = body?.detail
+    if (typeof d === 'string') return d
+    if (Array.isArray(d) && d.length) {
+      const first = d[0]
+      const field = Array.isArray(first.loc) ? first.loc[first.loc.length - 1] : ''
+      return field ? `${field}: ${first.msg}` : first.msg
+    }
+  } catch {
+    // JSON 아님 → 상태코드로 폴백
+  }
+  return `요청 실패 (${res.status})`
 }
 
 export const api = {

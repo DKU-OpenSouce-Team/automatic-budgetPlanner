@@ -1,52 +1,90 @@
-import { createContext, useContext, useState, useCallback } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import { api } from '../api/client'
+import { useAuth } from './AuthContext'
 
-// ── 초기 더미 데이터 (한 곳에서만 관리) ─────────────────
-const INITIAL_TRANSACTIONS = [
-  { id: '1',  store: '스타벅스',   amount: -5500,   date: '2026-06-01', category: '식비' },
-  { id: '2',  store: '지하철',     amount: -1400,   date: '2026-06-02', category: '교통' },
-  { id: '3',  store: '월급',       amount: 3200000, date: '2026-06-03', category: '수입' },
-  { id: '4',  store: '올리브영',   amount: -32000,  date: '2026-06-04', category: '쇼핑' },
-  { id: '5',  store: '맥도날드',   amount: -8900,   date: '2026-06-05', category: '식비' },
-  { id: '6',  store: '넷플릭스',   amount: -17000,  date: '2026-06-06', category: '구독' },
-  { id: '7',  store: 'CU편의점',   amount: -4200,   date: '2026-06-07', category: '식비' },
-  { id: '8',  store: '버스',       amount: -1400,   date: '2026-06-08', category: '교통' },
-  { id: '9',  store: '이마트',     amount: -55000,  date: '2026-06-09', category: '식비' },
-  { id: '10', store: '헬스장',     amount: -60000,  date: '2026-06-10', category: '건강' },
-  { id: '11', store: '카카오페이', amount: -12000,  date: '2026-06-11', category: '기타' },
-  { id: '12', store: '배달의민족', amount: -22000,  date: '2026-06-12', category: '식비' },
-  { id: '13', store: '지하철',     amount: -1400,   date: '2026-06-13', category: '교통' },
-  { id: '14', store: '무신사',     amount: -79000,  date: '2026-06-14', category: '쇼핑' },
-  { id: '15', store: '부수입',     amount: 450000,  date: '2026-06-15', category: '수입' },
-]
+// 지출 내역을 백엔드(FastAPI + Supabase)와 동기화하는 컨텍스트.
+// 로그인(token)되어 있을 때만 GET /transactions 로 불러오고, CRUD는 모두 API를 거친다.
 
 const TransactionContext = createContext(null)
 
+// ── 부호 정규화 ─────────────────────────────────────────
+// 백엔드 amount는 부호 없이 저장되므로(영수증·수동입력 경로마다 제각각),
+// 프론트 표시 규칙(수입=+, 지출=−)으로 통일한다. '수입' 카테고리만 +.
+function normalize(row) {
+  const raw = Number(row.amount) || 0
+  const isIncome = row.category === '수입'
+  return {
+    id: row.id,
+    store: row.store,
+    amount: isIncome ? Math.abs(raw) : -Math.abs(raw),
+    date: row.date,                 // 백엔드가 spent_at → date 로 변환해 내려줌
+    category: row.category || '기타',
+    note: row.note ?? '',
+  }
+}
+
+const byDateDesc = (a, b) => b.date.localeCompare(a.date)
+
 export function TransactionProvider({ children }) {
-  const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS)
+  const { token } = useAuth()
+  const [transactions, setTransactions] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
-  // ── CRUD ───────────────────────────────────────────────
+  // 목록 새로고침 (로그인 안 됐으면 비움)
+  const refresh = useCallback(async () => {
+    if (!token) { setTransactions([]); return }
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await api.get('/transactions')
+      setTransactions((data || []).map(normalize).sort(byDateDesc))
+    } catch (e) {
+      setError(e.message || '내역을 불러오지 못했습니다.')
+      setTransactions([])
+    } finally {
+      setLoading(false)
+    }
+  }, [token])
 
-  // 추가
-  const addTransaction = useCallback((tx) => {
-    const newTx = { ...tx, id: Date.now().toString() }
-    setTransactions(prev => [newTx, ...prev].sort((a, b) => b.date.localeCompare(a.date)))
-  }, [])
+  // 로그인 상태가 바뀌면(로그인/로그아웃/새로고침) 다시 불러온다.
+  useEffect(() => { refresh() }, [refresh])
 
-  // 수정
-  const updateTransaction = useCallback((id, changes) => {
-    setTransactions(prev =>
-      prev.map(t => t.id === id ? { ...t, ...changes } : t)
-          .sort((a, b) => b.date.localeCompare(a.date))
-    )
-  }, [])
+  // ── CRUD (모두 API 경유 후 동기화) ──────────────────────
+
+  // 추가 — tx: { store, amount, date, category, memo }
+  const addTransaction = useCallback(async (tx) => {
+    await api.post('/transactions', {
+      store: tx.store,
+      amount: Number(tx.amount),
+      date: tx.date,
+      category: tx.category || null,
+      memo: tx.memo ?? tx.note ?? null,
+    })
+    await refresh()
+  }, [refresh])
+
+  // 수정 — changes: { store?, amount?, date?, category?, memo? }
+  const updateTransaction = useCallback(async (id, changes) => {
+    await api.put(`/transactions/${id}`, {
+      store: changes.store,
+      amount: changes.amount != null ? Number(changes.amount) : undefined,
+      date: changes.date,
+      category: changes.category,
+      memo: changes.memo ?? changes.note,
+    })
+    await refresh()
+  }, [refresh])
 
   // 삭제
-  const deleteTransaction = useCallback((id) => {
+  const deleteTransaction = useCallback(async (id) => {
+    await api.del(`/transactions/${id}`)
     setTransactions(prev => prev.filter(t => t.id !== id))
   }, [])
 
-  // 여러 건 삭제 (MyFilesPage용)
-  const deleteTransactions = useCallback((ids) => {
+  // 여러 건 삭제
+  const deleteTransactions = useCallback(async (ids) => {
+    await Promise.all(ids.map(id => api.del(`/transactions/${id}`)))
     const set = new Set(ids)
     setTransactions(prev => prev.filter(t => !set.has(t.id)))
   }, [])
@@ -54,6 +92,9 @@ export function TransactionProvider({ children }) {
   return (
     <TransactionContext.Provider value={{
       transactions,
+      loading,
+      error,
+      refresh,
       addTransaction,
       updateTransaction,
       deleteTransaction,

@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const { setUser } = useAuth()
+  const { login } = useAuth()
   const navigate = useNavigate()
 
   async function handleSubmit() {
@@ -26,14 +26,18 @@ export default function LoginPage() {
       setError('비밀번호가 일치하지 않습니다.')
       return
     }
+    // 이메일 형식 사전 검증 (백엔드 EmailStr이 도메인에 점 없는 주소 등을 거부)
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('올바른 이메일 형식이 아닙니다. (예: name@gmail.com)')
+      return
+    }
 
     setLoading(true)
     try {
       if (mode === 'login') {
         // 로그인 요청
         const data = await api.post('/auth/login', { email, password })
-        localStorage.setItem('token', data.access_token)
-        setUser(data.user)
+        login(data)   // 토큰·유저 저장 (localStorage + 전역 상태)
         navigate('/')
       } else {
         // 회원가입 요청
@@ -42,7 +46,9 @@ export default function LoginPage() {
         setError('회원가입 완료! 로그인해주세요.')
       }
     } catch (e) {
-      setError(mode === 'login' ? '이메일 또는 비밀번호가 잘못되었습니다.' : '회원가입에 실패했습니다.')
+      // 서버가 보낸 실제 사유를 우선 표시, 없으면 기본 문구
+      const fallback = mode === 'login' ? '이메일 또는 비밀번호가 잘못되었습니다.' : '회원가입에 실패했습니다.'
+      setError(e?.message || fallback)
     } finally {
       setLoading(false)
     }

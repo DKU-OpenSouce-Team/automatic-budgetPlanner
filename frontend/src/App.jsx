@@ -1,5 +1,5 @@
-import { Routes, Route, Link, useLocation } from 'react-router-dom'
-import { AuthProvider } from './contexts/AuthContext'
+import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { TransactionProvider } from './contexts/TransactionContext'
 import MainPage from './pages/MainPage.jsx'
 import ReceiptUploadPage from './pages/ReceiptUploadPage.jsx'
@@ -24,11 +24,11 @@ export default function App() {
           <Navbar />
           <main style={S.content}>
             <Routes>
-              <Route path="/"             element={<MainPage />} />
-              <Route path="/upload"       element={<ReceiptUploadPage />} />
-              <Route path="/transactions" element={<TransactionsPage />} />
-              <Route path="/analytics"    element={<AnalyticsPage />} />
-              <Route path="/files"        element={<MyFilesPage />} />
+              <Route path="/"             element={<RequireAuth><MainPage /></RequireAuth>} />
+              <Route path="/upload"       element={<RequireAuth><ReceiptUploadPage /></RequireAuth>} />
+              <Route path="/transactions" element={<RequireAuth><TransactionsPage /></RequireAuth>} />
+              <Route path="/analytics"    element={<RequireAuth><AnalyticsPage /></RequireAuth>} />
+              <Route path="/files"        element={<RequireAuth><MyFilesPage /></RequireAuth>} />
               <Route path="/login"        element={<LoginPage />} />
             </Routes>
           </main>
@@ -38,8 +38,23 @@ export default function App() {
   )
 }
 
+// 로그인 안 된 사용자가 보호 페이지에 접근하면 로그인 화면으로 보낸다.
+function RequireAuth({ children }) {
+  const { isAuthenticated } = useAuth()
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  return children
+}
+
 function Navbar() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { isAuthenticated, user, logout } = useAuth()
+
+  function handleLogout() {
+    logout()
+    navigate('/login')
+  }
+
   return (
     <nav style={S.nav}>
       <Link to="/" style={S.logo}>
@@ -61,10 +76,20 @@ function Navbar() {
           )
         })}
       </div>
-      <Link to="/login" style={S.loginBtn}>
-        <LoginIcon />
-        로그인
-      </Link>
+      {isAuthenticated ? (
+        <div style={S.userArea}>
+          <span style={S.userEmail}>{user?.email}</span>
+          <button style={S.loginBtn} onClick={handleLogout}>
+            <LoginIcon />
+            로그아웃
+          </button>
+        </div>
+      ) : (
+        <Link to="/login" style={S.loginBtn}>
+          <LoginIcon />
+          로그인
+        </Link>
+      )}
     </nav>
   )
 }
@@ -117,6 +142,12 @@ const S = {
     display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px',
     borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#374151',
     textDecoration: 'none', border: '1px solid #e5e7eb', background: '#fff',
-    minWidth: 76, justifyContent: 'center',
+    minWidth: 76, justifyContent: 'center', cursor: 'pointer',
+    fontFamily: 'inherit',
+  },
+  userArea: { display: 'flex', alignItems: 'center', gap: 10 },
+  userEmail: {
+    fontSize: 12, color: '#6b7280', fontWeight: 500,
+    maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
   },
 }
