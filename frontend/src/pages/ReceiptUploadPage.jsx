@@ -6,6 +6,14 @@ import { api } from '../api/client'
 const TABS = ['영수증 업로드', '수동 작성', 'CSV 업로드']
 const CATEGORY_OPTIONS = ['식비', '카페/간식', '편의점', '마트/쇼핑', '의료/건강', '교통', '문화/여가', '의류', '수입', '기타']
 
+
+function isFutureDate(dateStr) {
+  if (!dateStr) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return new Date(dateStr) > today
+}
+
 export default function ReceiptUploadPage() {
   const [tab, setTab] = useState(0)
 
@@ -80,6 +88,7 @@ function ReceiptUpload() {
   }
 
   async function handleSave() {
+    if (isFutureDate(date)) { setError('미래 날짜는 입력할 수 없습니다.'); return }
     try {
       await api.post('/receipts/confirm', { store, amount: Number(amount) || 0, date, category })
       await refresh()   // 전역 내역 동기화 → 목록/통계 화면에 즉시 반영
@@ -146,18 +155,18 @@ function ManualEntry() {
   const [error, setError] = useState('')
 
   async function handleSubmit() {
-    if (!store || !amount || !date) { setError('가게명, 금액, 날짜는 필수입니다.'); return }
-    setError('')
-    try {
-      // 컨텍스트 경유로 저장(POST /transactions) → 전역 내역 즉시 동기화
-      await addTransaction({ store, amount, date, category, memo })
-      alert('저장되었습니다!')
-      setStore(''); setAmount(''); setDate(''); setCategory(''); setMemo('')
-      navigate('/transactions')
-    } catch {
-      setError('저장에 실패했습니다.')
-    }
+  if (!store || !amount || !date) { setError('가게명, 금액, 날짜는 필수입니다.'); return }
+  if (isFutureDate(date)) { setError('미래 날짜는 입력할 수 없습니다.'); return }
+  setError('')
+  try {
+    await addTransaction({ store, amount, date, category, memo })
+    alert('저장되었습니다!')
+    setStore(''); setAmount(''); setDate(''); setCategory(''); setMemo('')
+    navigate('/transactions')
+  } catch {
+    setError('저장에 실패했습니다.')
   }
+}
 
   return (
     <div>
