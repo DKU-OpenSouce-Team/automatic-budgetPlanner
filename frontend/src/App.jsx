@@ -24,7 +24,7 @@ export default function App() {
           <Navbar />
           <main style={S.content}>
             <Routes>
-              <Route path="/"             element={<RequireAuth><MainPage /></RequireAuth>} />
+              <Route path="/"             element={<MainPage />} />
               <Route path="/upload"       element={<RequireAuth><ReceiptUploadPage /></RequireAuth>} />
               <Route path="/transactions" element={<RequireAuth><TransactionsPage /></RequireAuth>} />
               <Route path="/analytics"    element={<RequireAuth><AnalyticsPage /></RequireAuth>} />
