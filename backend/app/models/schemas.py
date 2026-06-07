@@ -1,7 +1,12 @@
 """Pydantic 스키마."""
 from datetime import date
 from typing import Any
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
+
+# bcrypt는 비밀번호를 UTF-8 72바이트까지만 처리한다(초과분은 조용히 무시).
+# 길이 검증 없이 해싱하면 일부 백엔드(passlib/bcrypt 4.x)에서 500이 발생할 수 있어
+# 입력 단계에서 명시적으로 거부한다.
+_BCRYPT_MAX_PASSWORD_BYTES = 72
 
 
 # ── 인증 ──────────────────────────────────────────────────────────────────────
@@ -9,6 +14,17 @@ from pydantic import BaseModel, EmailStr
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
+
+    @field_validator("password")
+    @classmethod
+    def _validate_password(cls, v: str) -> str:
+        if not v:
+            raise ValueError("비밀번호를 입력하세요.")
+        if len(v.encode("utf-8")) > _BCRYPT_MAX_PASSWORD_BYTES:
+            raise ValueError(
+                f"비밀번호는 UTF-8 기준 {_BCRYPT_MAX_PASSWORD_BYTES}바이트 이하여야 합니다."
+            )
+        return v
 
 
 class UserResponse(BaseModel):

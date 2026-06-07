@@ -43,4 +43,10 @@ def get_current_user_id(
 ) -> str:
     """보호된 라우트에서 FastAPI Depends()로 사용하는 인증 의존성."""
     payload = decode_access_token(credentials.credentials)
-    return payload["sub"]
+    user_id = payload.get("sub")
+    if not user_id or not isinstance(user_id, str):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="유효하지 않은 토큰입니다.",
+        )
+    return user_id

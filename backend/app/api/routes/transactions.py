@@ -94,7 +94,13 @@ def update_transaction(
     if not updates:
         raise HTTPException(status_code=400, detail="수정할 항목이 없습니다.")
 
-    result = sb.table("transactions").update(updates).eq("id", tx_id).execute()
+    result = (
+        sb.table("transactions")
+        .update(updates)
+        .eq("id", tx_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
     if not result.data:
         raise HTTPException(status_code=500, detail="수정에 실패했습니다.")
     return _fmt(result.data[0])
@@ -116,4 +122,4 @@ def delete_transaction(
     )
     if not existing.data:
         raise HTTPException(status_code=404, detail="내역을 찾을 수 없습니다.")
-    sb.table("transactions").delete().eq("id", tx_id).execute()
+    sb.table("transactions").delete().eq("id", tx_id).eq("user_id", user_id).execute()
