@@ -104,8 +104,8 @@ def parse_rows(raw: bytes) -> list[dict]:
         elif out_amt and out_amt > 0:
             amount, is_income = out_amt, False
         elif gen_amt is not None and gen_amt != 0:
-            # 단일 '금액' 열은 보통 결제(지출)로 본다. 부호가 음수면 출금으로 간주.
-            amount, is_income = abs(gen_amt), False
+            # 단일 '금액' 열: 양수=입금(수입), 음수=출금(지출)으로 구분한다.
+            amount, is_income = abs(gen_amt), gen_amt > 0
         else:
             continue
 

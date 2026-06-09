@@ -90,6 +90,7 @@ function ReceiptUpload() {
   }
 
   async function handleSave() {
+    if (!store || !amount || !date) { setError('가게명, 금액, 날짜는 필수입니다.'); return }
     if (isFutureDate(date)) { setError('미래 날짜는 입력할 수 없습니다.'); return }
     try {
       await api.post('/receipts/confirm', { store, amount: Number(amount) || 0, date, category })
