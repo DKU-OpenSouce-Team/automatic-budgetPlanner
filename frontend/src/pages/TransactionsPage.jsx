@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTransactions } from '../contexts/TransactionContext'
+import { isFutureDate, todayStr } from '../utils/date'
 
 const CATEGORY_OPTIONS = ['식비', '카페/간식', '편의점', '마트/쇼핑', '의료/건강', '교통', '문화/여가', '의류', '수입', '기타']
 
@@ -28,6 +29,7 @@ export default function TransactionsPage() {
   }
 
   function handleSaveEdit(id) {
+    if (isFutureDate(editDate)) { alert('미래 날짜는 입력할 수 없습니다.'); return }
     updateTransaction(id, {
       store: editStore,
       amount: Number(editAmount),
@@ -128,7 +130,7 @@ export default function TransactionsPage() {
                 <div style={styles.editRow}>
                   <input style={styles.editInput} value={editStore}    onChange={e => setEditStore(e.target.value)}    placeholder="가게명" />
                   <input style={styles.editInput} type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} placeholder="금액" />
-                  <input style={styles.editInput} type="date"   value={editDate}   onChange={e => setEditDate(e.target.value)} />
+                  <input style={styles.editInput} type="date"   max={todayStr()} value={editDate}   onChange={e => setEditDate(e.target.value)} />
                   <select style={styles.editInput} value={editCategory} onChange={e => setEditCategory(e.target.value)}>
                     {CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>

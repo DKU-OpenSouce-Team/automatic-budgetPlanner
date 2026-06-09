@@ -94,6 +94,19 @@ def _to_magnitude(v: int | None) -> int | None:
     return v if v is None else abs(v)
 
 
+# 지출 날짜는 미래일 수 없다(프론트에서도 막지만 API 우회 방어). 형식·미래 검증.
+def _reject_future_date(v: str | None) -> str | None:
+    if v is None:
+        return v
+    try:
+        d = date.fromisoformat(str(v)[:10])
+    except ValueError:
+        raise ValueError("날짜 형식은 'YYYY-MM-DD' 이어야 합니다.")
+    if d > date.today():
+        raise ValueError("미래 날짜는 입력할 수 없습니다.")
+    return v
+
+
 class TransactionFromClient(BaseModel):
     """POST /transactions, POST /receipts/confirm 요청 바디."""
     store: str
@@ -106,6 +119,11 @@ class TransactionFromClient(BaseModel):
     @classmethod
     def _normalize_amount(cls, v: int) -> int:
         return _to_magnitude(v)
+
+    @field_validator("date")
+    @classmethod
+    def _validate_date(cls, v: str) -> str:
+        return _reject_future_date(v)
 
 
 class TransactionUpdateFromClient(BaseModel):
@@ -120,6 +138,11 @@ class TransactionUpdateFromClient(BaseModel):
     @classmethod
     def _normalize_amount(cls, v: int | None) -> int | None:
         return _to_magnitude(v)
+
+    @field_validator("date")
+    @classmethod
+    def _validate_date(cls, v: str | None) -> str | None:
+        return _reject_future_date(v)
 
 
 # ── 나만의 파일 ───────────────────────────────────────────────────────────────

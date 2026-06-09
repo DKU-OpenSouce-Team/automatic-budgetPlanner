@@ -2,19 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTransactions } from '../contexts/TransactionContext'
 import { api } from '../api/client'
+import { isFutureDate, todayStr } from '../utils/date'
 
 const TABS = ['영수증 업로드', '수동 작성', 'CSV 업로드']
 const CATEGORY_OPTIONS = ['식비', '카페/간식', '편의점', '마트/쇼핑', '의료/건강', '교통', '문화/여가', '의류', '수입', '기타']
-
-
-function isFutureDate(dateStr) {
-  if (!dateStr) return false
-  const [year, month, day] = dateStr.split('-').map(Number)
-  const selected = new Date(year, month - 1, day)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return selected > today
-}
 
 export default function ReceiptUploadPage() {
   const [tab, setTab] = useState(0)
@@ -131,7 +122,7 @@ function ReceiptUpload() {
             <label style={styles.label}>금액 (원)</label>
             <input style={styles.input} type="number" value={amount} onChange={e => setAmount(e.target.value)} />
             <label style={styles.label}>날짜</label>
-            <input style={styles.input} type="date" value={date} onChange={e => setDate(e.target.value)} />
+            <input style={styles.input} type="date" max={todayStr()} value={date} onChange={e => setDate(e.target.value)} />
             <label style={styles.label}>카테고리</label>
             <select style={styles.input} value={category} onChange={e => setCategory(e.target.value)}>
               <option value="">카테고리 선택</option>
@@ -180,7 +171,7 @@ function ManualEntry() {
         <label style={styles.label}>금액 (원) *</label>
         <input style={styles.input} type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="5000" />
         <label style={styles.label}>날짜 *</label>
-        <input style={styles.input} type="date" value={date} onChange={e => setDate(e.target.value)} />
+        <input style={styles.input} type="date" max={todayStr()} value={date} onChange={e => setDate(e.target.value)} />
         <label style={styles.label}>카테고리</label>
         <select style={styles.input} value={category} onChange={e => setCategory(e.target.value)}>
           <option value="">카테고리 선택</option>
