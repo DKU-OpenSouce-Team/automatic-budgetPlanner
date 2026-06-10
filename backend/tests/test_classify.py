@@ -38,6 +38,11 @@ def test_classify_caches_result():
     assert cs._cache_key("스타벅스") in cs._cache
 
 
+def test_classify_does_not_cache_default_category():
+    assert cs.classify("듣도보도못한가게") == "기타"
+    assert cs._cache_key("듣도보도못한가게") not in cs._cache
+
+
 def test_kakao_code_is_mapped_to_category(monkeypatch):
     monkeypatch.setattr(cs.settings, "KAKAO_API_KEY", "DUMMY")
 

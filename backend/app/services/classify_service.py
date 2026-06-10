@@ -149,5 +149,8 @@ def classify(store: str, items: list[str] | None = None) -> str:
         or _classify_by_keyword(store, items)
         or DEFAULT_CATEGORY
     )
-    _cache_set(store, category)
+    # '기타'는 분류 실패(일시적 API 장애·키 미설정 포함)의 결과일 수 있으므로
+    # 캐싱하지 않는다 — 다음 호출에서 재분류 기회를 남긴다.
+    if category != DEFAULT_CATEGORY:
+        _cache_set(store, category)
     return category
