@@ -26,6 +26,14 @@
    - [개발 일정](#개발-일정)
    - [예상 위험 요인 및 대책](#예상-위험-요인-및-대책)
    - [성공 여부 판별 기준](#성공-여부-판별-기준)
+- [🔧 개발자 가이드](#-개발자-가이드)
+   - [사전 요구 사항](#사전-요구-사항)
+   - [프로젝트 구조](#프로젝트-구조)
+   - [백엔드 실행](#백엔드-실행)
+   - [프론트엔드 실행](#프론트엔드-실행)
+   - [데이터베이스 설정](#데이터베이스-설정)
+   - [테스트 실행](#테스트-실행)
+   - [기여 방법(브랜치 전략)](#기여-방법브랜치-전략)
 - [📖 용어 설명 및 참고문헌](#-용어-설명-및-참고문헌)
    - [용어 설명](#용어-설명)
    - [참고문헌 및 자료](#참고문헌-및-자료)
@@ -244,6 +252,86 @@
 |  주요 페이지 로딩 속도  | 일반 네트워크 환경 기준 LCP 3.0초 이내  |
 |  파일 저장·공유 정확도  | 선택한 내역을 누락·왜곡 없이 저장·출력  |
 |  발표 및 데모   | 실제 영수증 샘플로 실시간 테스트 완료 |
+
+## 🔧 개발자 가이드
+> 프로젝트를 로컬에서 직접 실행하거나 개발에 참여하려는 분들을 위한 안내입니다.
+
+ ### 사전 요구 사항
+|        도구       |        버전        |     용도    |
+| :--------------------:  | :--------------------: |  :----------------:    |
+|  Python  |  3.12 권장  | 백엔드(FastAPI) 실행 |
+|  Node.js  |  18 이상  | 프론트엔드(React + Vite) 실행 |
+|  Supabase 계정  |  무료 플랜 가능  | 데이터베이스(PostgreSQL) |
+
+ ### 프로젝트 구조
+프론트엔드와 백엔드가 한 저장소에 있는 모노레포 구조입니다.
+```text
+Bill-Gets/
+├─ frontend/                  # React(Vite) SPA
+│  ├─ src/api/client.js       # 공통 API 클라이언트(JWT 토큰 자동 첨부)
+│  ├─ src/pages/              # 페이지별 컴포넌트(메인·영수증 등록·지출 내역·분석·나만의 파일·로그인)
+│  ├─ src/contexts/           # 전역 상태(AuthContext: 인증 / TransactionContext: 거래)
+│  └─ .env.example            # 환경 변수 예시
+└─ backend/                   # FastAPI 서버
+   ├─ main.py                 # 앱 진입점(CORS 설정 + 라우터 등록)
+   ├─ app/core/               # 설정(config) · JWT 보안(security) · Supabase 클라이언트
+   ├─ app/api/routes/         # auth · receipts · transactions · analytics · files
+   ├─ app/services/           # OCR · 카테고리 분류 · 내보내기 · CSV 가져오기
+   ├─ app/models/schemas.py   # Pydantic 요청/응답 스키마
+   ├─ db/schema.sql           # Supabase 테이블 DDL
+   ├─ tests/                  # pytest 단위 테스트
+   └─ .env.example            # 환경 변수 예시
+```
+
+ ### 백엔드 실행
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate            # macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+copy .env.example .env            # macOS/Linux: cp .env.example .env → 복사 후 값 채우기
+uvicorn main:app --reload         # http://localhost:8000 에서 실행
+```
+
+`backend/.env` 환경 변수:
+|        변수       |        필수 여부        |     설명    |
+| :--------------------:  | :--------------------: |  :----------------:    |
+|  SUPABASE_URL / SUPABASE_KEY  |  필수  | Supabase 프로젝트 URL과 anon key. 없으면 DB 연동 기능이 동작하지 않습니다. |
+|  JWT_SECRET  |  권장  | 토큰 서명 키. 비워두면 실행할 때마다 임의 키가 생성되어 서버 재시작 시 전체 재로그인이 필요합니다. |
+|  KAKAO_API_KEY  |  선택  | 카테고리 분류용 Kakao Local API 키. 없으면 키워드 규칙 폴백만으로 분류합니다. |
+|  ANTHROPIC_API_KEY  |  선택  | OCR 신뢰도가 낮을 때 Claude API로 파싱을 보완합니다. 없으면 폴백 없이 동작합니다(토큰 종량 과금 주의). |
+|  CORS_ORIGINS  |  선택  | 허용 출처(콤마 구분). 기본값은 `http://localhost:5173` 입니다. |
+
+- 첫 영수증 인식 시 EasyOCR 한국어 모델이 자동 다운로드되어 수 분이 걸릴 수 있습니다.
+- 서버 실행 후 `http://localhost:8000/docs` 에서 Swagger 기반 API 문서를 확인할 수 있습니다.
+
+ ### 프론트엔드 실행
+```bash
+cd frontend
+npm install
+copy .env.example .env            # macOS/Linux: cp — 백엔드가 기본 주소(localhost:8000)면 수정 불필요
+npm run dev                       # http://localhost:5173 에서 실행
+```
+- 백엔드 주소가 다르면 `.env`의 `VITE_API_BASE_URL` 값을 수정합니다.
+- 배포용 빌드: `npm run build` → `dist/` 폴더가 생성됩니다(`npm run preview`로 빌드 결과 확인 가능).
+
+ ### 데이터베이스 설정
+1. [Supabase](https://supabase.com/)에서 새 프로젝트를 생성합니다.
+2. 대시보드의 SQL Editor에 `backend/db/schema.sql` 내용을 붙여넣어 실행합니다 → `users` · `transactions` · `user_files` 테이블과 인덱스가 생성됩니다.
+3. Settings → API 에서 프로젝트 URL과 anon key를 복사해 `backend/.env`에 입력합니다.
+
+ ### 테스트 실행
+```bash
+cd backend
+pytest                            # venv 활성화 상태에서 실행
+```
+- OCR 파싱 · 카테고리 분류 · 인증 스키마 · 거래 스키마 · CSV 가져오기 · 내보내기 · 보안(JWT) 7개 모듈의 단위 테스트가 실행됩니다. 외부 API나 DB 연결 없이 동작합니다.
+
+ ### 기여 방법(브랜치 전략)
+1. 저장소를 포크한 뒤 `main`에서 작업 브랜치를 생성합니다 — `feature/<기능명>` 또는 `fix/<수정내용>`.
+2. 커밋 메시지에는 `feat:` `fix:` `docs:` 등의 접두사를 사용합니다.
+3. 원본 저장소의 `main`으로 Pull Request를 올리고, 리뷰 후 **Squash merge**로 병합합니다(GitHub Flow).
+4. 병합 후에는 로컬 `main`을 원본 저장소와 동기화하고 작업 브랜치를 삭제합니다.
 
 ## 📖 용어 설명 및 참고문헌
  ### 용어 설명
