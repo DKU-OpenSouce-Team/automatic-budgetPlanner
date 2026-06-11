@@ -92,7 +92,7 @@
 
  ### 웹페이지 구성(정보 구조)
  **1. 메인 페이지**
- <p align="center"> <img width="1389" height="621" alt="Image" src="https://github.com/user-attachments/assets/5ed3f1cd-7346-4998-860c-0481b090cb6a" /> </p>
+ <img width="2547" height="1268" alt="image" src="https://github.com/user-attachments/assets/ef7083d4-2a75-4716-8b9f-6856364de26c" />
 
  - 로그인
  - 지출 캘린더
@@ -103,7 +103,8 @@
 ---
 
 **2. 영수증 등록**
-<p align="center"> <img width="1418" height="617" alt="Image" src="https://github.com/user-attachments/assets/c9168161-5ac1-461b-b666-6137f317456e" /> </p>
+<img width="2548" height="1275" alt="image" src="https://github.com/user-attachments/assets/196885ab-eb88-4d95-872c-f2cf4794a2a6" />
+
 
 - 파일에서 업로드
 - 카메라로 촬영
@@ -111,7 +112,8 @@
 ---
 
 **3. 지출 내역**
-<p align="center"> <img width="1389" height="621" alt="Image" src="https://github.com/user-attachments/assets/b6ff4afd-0fda-4d04-b20a-1a4363d6fe08" /> </p>
+<img width="1263" height="540" alt="image" src="https://github.com/user-attachments/assets/c6855214-cad2-4cfd-bb36-dcf30c5656b4" />
+
 
 - 검색 기능
 - 총 건수·지출·수입
@@ -120,7 +122,8 @@
 ---
 
 **4. 분석 & 통계**
-<p align="center"> <img width="1389" height="621" alt="Image" src="https://github.com/user-attachments/assets/a8e80b1d-7312-4e07-b2f0-d72951c4bc60" /> </p>
+<img width="1264" height="833" alt="image" src="https://github.com/user-attachments/assets/6e498f58-9ceb-413d-8951-06f8a4808e29" />
+
 
 - 수입 및 지출 분석
 - 월별 추이 · 요일별 분석 · 전월 비교 · 예산 관리
@@ -128,28 +131,33 @@
 ---
 
 **5. 나만의 파일**
-<p align="center"> <img width="1389" height="621" alt="Image" src="https://github.com/user-attachments/assets/44aab7a7-8877-47af-a4f7-f58d6e7fa81b" /> </p>
+<img width="1257" height="731" alt="image" src="https://github.com/user-attachments/assets/5d0f3725-5e63-40df-b789-1b25e0ff886b" />
+
 
 - 파일 추가 및 내역 선택·수정
 - 파일 내보내기(Excel)
+
+---
 
  ### 사용자 시나리오
  **배경**
  >김현영(23세, 대학생)씨는 월세 납부를 위해 지출 관리를 해야 하지만, 매번 가계부 쓰는게 귀찮아서 늘 작심삼일로 끝났다. 현금도 자주 쓰는 편이라 카드 앱만으로는 지출 파악이 어렵다.
 
+(https://youtu.be/XKwpnoC6k7w) << 사용자 시나리오 가이드 동영상
+
 **1. 첫 방문 및 회원가입**
-<p align="center"> <img width="1432" height="443" alt="Image" src="https://github.com/user-attachments/assets/56c1e364-5f30-4f0e-9439-b4ed889a78f4" /> </p>
+<img width="1267" height="485" alt="image" src="https://github.com/user-attachments/assets/7856c8f8-a019-44b0-b523-83e2f5e442d0" />
 
 현영이는 친구의 추천으로 BillGets에 처음 접속한다.
  - 메인페이지에서 우측 상단의 로그인 버튼을 클릭해 로그인 페이지로 이동한다.
  - '회원가입' 버튼을 클릭해 이메일과 비밀번호를 입력하고 계정을 생성한다.
  - 로그인 후 메인페이지로 이동한다.
- - 아직 등록된 내역이 없어 "영수증을 등록해보세요!" 안내 문구가 보인다.
 
 ---
 
 **2. 영수증 관리**
-<p align="center"> <img width="1432" height="676" alt="Image" src="https://github.com/user-attachments/assets/85b9cba5-4d19-4e99-8732-b50a123d2af0" /> </p>
+<img width="1259" height="498" alt="image" src="https://github.com/user-attachments/assets/9e0910a1-fc5a-42e8-a62b-944938a45401" />
+
 
 현영이는 편의점에서 빵을 카드로 결제하고, 그 영수증을 들고 있다.
  - 카메라로 영수증 사진을 찍는다.
@@ -163,7 +171,7 @@
 ---
  
 **3. 현금 지출 수동 입력**
-<p align="center"> <img width="1431" height="477" alt="Image" src="https://github.com/user-attachments/assets/21fc97af-f53c-4fe5-a32a-ebe198062f9b" /> </p>
+<img width="1259" height="574" alt="image" src="https://github.com/user-attachments/assets/2c766242-d9e9-4aac-87f5-ff0effdb3636" />
 
 현영이는 동네 포장마차에서 붕어빵과 어묵을 현금으로 결제했고, 영수증은 받아오지 않았다.
  - 영수증 등록 페이지에서 '지출 내역 수동 입력' 버튼을 클릭한다.
@@ -173,7 +181,7 @@
 ---
 
 **4. 분석&통계에서 지출 파악**
-<p align="center"> <img width="1431" height="686" alt="Image" src="https://github.com/user-attachments/assets/10f4684c-2e45-4a18-85fb-260305698ac3" /> </p>
+<img width="1262" height="732" alt="image" src="https://github.com/user-attachments/assets/ca70925a-c446-4ee1-b2a5-25ca46767af3" />
 
 월세 납부일이 다가온 현영이는 이번 달 지출을 되돌아보고자 한다.
  - 메인페이지에서 '지출 캘린더'에 날짜별 지출 금액이 표시된다.
@@ -184,7 +192,7 @@
 ---
 
 **5. 지출 내역 검색**
-<p align="center"> <img width="1431" height="686" alt="Image" src="https://github.com/user-attachments/assets/10f4684c-2e45-4a18-85fb-260305698ac3" /> </p>
+<img width="1257" height="374" alt="image" src="https://github.com/user-attachments/assets/9994f682-f2d2-4deb-b1de-b034b2af2246" />
 
 현영이는 저번 주에 갔던 포장마차에서의 지출 기록을 찾고 싶다.
  - '지출 내역' 탭으로 이동한다.
@@ -194,13 +202,15 @@
 ---
 
 **6. 파일 생성 및 다운로드**
-<p align="center"> <img width="1432" height="636" alt="Image" src="https://github.com/user-attachments/assets/4ed6664c-b3af-43a1-a340-05039fd23047" /> </p>
+<img width="1265" height="687" alt="image" src="https://github.com/user-attachments/assets/9ea165ff-94e2-4992-bfaa-973f6eeb3081" />
 
 현영이는 이번 달 식비 내역을 정리해서 부모님께 보내드리고 싶다.
  - '나만의 파일' 탭으로 이동한다.
  - '새 파일 만들기' 버튼을 클릭하여, 파일 이름(3월 식비)과 설명(많이 먹었습니다.)을 입력한다.
  - 카테고리가 '식비'인 내역만 선택하고 '파일 생성'을 클릭한다.
  - 생성한 파일을 '파일 내보내기' 버튼을 클릭해 Excel 파일을 다운로드한 뒤, 부모님께 전송한다.
+
+---
 
 ## 🛠️ 기술 스택
 |         구분       |          기술/도구        |
